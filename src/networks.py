@@ -57,7 +57,7 @@ class RFFNet(BaseNetwork):
         num_blocks = [4]
         out_channels = [32, 64]
         # out_channels = [64, 64]
-        self.stage1, pre_stage_channels = self._make_stage(
+        self.stage0, pre_stage_channels = self._make_stage(
             num_blocks, in_channels, out_channels, stage_index=0)
 
         out_channels = [32, 128]
@@ -65,7 +65,7 @@ class RFFNet(BaseNetwork):
         num_blocks = [4, 4]
         # num_blocks = [1, 1]
 
-        self.stage2, pre_stage_channels = self._make_stage(
+        self.stage1, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=1)
 
         # out_channels = [32, 256]
@@ -73,7 +73,7 @@ class RFFNet(BaseNetwork):
         num_blocks = [4, 4]
         # num_blocks = [1, 1]
 
-        self.stage3, pre_stage_channels = self._make_stage(
+        self.stage2, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=2)
 
         # out_channels = [32, 512]
@@ -81,7 +81,7 @@ class RFFNet(BaseNetwork):
         # num_blocks = [2, 2]
         num_blocks = [4, 4]
 
-        self.stage4, pre_stage_channels = self._make_stage(
+        self.stage3, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=3)
 
         self.final_layer = nn.Conv2d(
@@ -120,10 +120,10 @@ class RFFNet(BaseNetwork):
 
     def forward(self, x):
         x = self.layer1(x)
-        x_list = self.stage1([x])
+        x_list = self.stage0([x])
+        x_list = self.stage1(x_list)
         x_list = self.stage2(x_list)
         x_list = self.stage3(x_list)
-        x_list = self.stage4(x_list)
         x = self.final_layer(x_list[0])
         x = (torch.tanh(x) + 1) / 2
         return x
@@ -251,7 +251,7 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x):
         out = x + self.conv_block(x)
-        out=nn.LeakyReLU(0.2, inplace=True)(out)
+        out = nn.LeakyReLU(0.2, inplace=True)(out)
         return out
 
 
@@ -279,7 +279,7 @@ class BottleneckBlock(nn.Module):
         if self.downsample is not None:
             residual = self.downsample(x)
         out = self.conv_block(x) + residual
-        out= nn.LeakyReLU(0.2, inplace=True)(out)
+        out = nn.LeakyReLU(0.2, inplace=True)(out)
         return out
 
 
@@ -308,7 +308,7 @@ class TwoBranchModule(nn.Module):
 
         self.branches = self._make_branches(num_blocks)
         self.fuse_layers = self._make_fuse_layers(out_channels)
-        self.fused_branches = self._make_fused_branches(out_channels)
+        self.fused_branches = self._make_dimention_reduce(out_channels)
 
     def _make_one_branch(self, branch_index, num_blocks,
                          dilation):
@@ -336,35 +336,41 @@ class TwoBranchModule(nn.Module):
 
         return nn.ModuleList(branches)
 
-    def _make_fused_branch(self, branch_index, out_channels,
-                          dilation):
+    def _make_d_reduce(self, branch_index, out_channels,
+                       dilation=1):
         layers = []
         # stage >0, need concatenate
         if self.stage > 0:
-            in_c = out_channels[branch_index]*2
+            if branch_index == 0:
+                in_c = self.num_inchannels[0] + self.num_inchannels[1]
+            else:
+                in_c = self.num_inchannels[0] * (1<<(self.stage + 1)) + self.num_inchannels[1] * 2
         else:
-            in_c = out_channels[branch_index]
+            if branch_index == 0:
+                in_c = self.num_inchannels[0]
+            else:
+                in_c= self.num_inchannels[0]*(self.stage + 1) + self.num_inchannels[0]
         for i in range(1):
             layers.append(
                 nn.Sequential(
-                spectral_norm(
-                    nn.Conv2d(in_channels=in_c, out_channels=out_channels[branch_index],
-                              kernel_size=3, stride=1,
-                              padding=1, dilation=dilation, bias=not True), True),
-                nn.LeakyReLU(0.2, inplace=True)
-            ))
+                    spectral_norm(
+                        nn.Conv2d(in_channels=in_c, out_channels=out_channels[branch_index],
+                                  kernel_size=3, stride=1,
+                                  padding=1, dilation=dilation, bias=not True), True),
+                    nn.LeakyReLU(0.2, inplace=True)
+                ))
 
         return nn.Sequential(*layers)
 
-    def _make_fused_branches(self, out_channels):
+    def _make_dimention_reduce(self, out_channels):
         branches = []
         # main branch
         branches.append(
-            self._make_fused_branch(0, out_channels, 1)
+            self._make_d_reduce(0, out_channels)
         )
         # vice branch :dilation ==2
         branches.append(
-            self._make_fused_branch(1, out_channels, 1)
+            self._make_d_reduce(1, out_channels)
         )
 
         return nn.ModuleList(branches)
@@ -381,29 +387,31 @@ class TwoBranchModule(nn.Module):
                 if j > i:
                     fuse_layer.append(
                         nn.Sequential(
-                            spectral_norm(nn.Conv2d(
-                                num_inchannels[j],
-                                out_channels[i],
-                                1, 1, 0, bias=False
-                            ), True),
-                            nn.LeakyReLU(0.2, inplace=True),
-                            nn.Upsample(scale_factor=2 << (self.stage - 1), mode='nearest')
+                            # spectral_norm(nn.Conv2d(
+                            #     num_inchannels[j],
+                            #     out_channels[i],
+                            #     1, 1, 0, bias=False
+                            # ), True),
+                            nn.LeakyReLU(0.2, inplace=False),
+                            nn.Upsample(scale_factor=2 << (self.stage - 1), mode='bilinear')
                         )
                     )
                 # main branch
                 elif j == i == 0:
-                    fuse_layer.append(
-                        nn.Sequential(
-                            spectral_norm(nn.Conv2d(
-                                num_inchannels[j],
-                                out_channels[i],
-                                1, 1, 0, bias=False
-                            ), True),nn.LeakyReLU(0.2, inplace=True)
-                        )
-                    )
+                    fuse_layer.append(None)
+                    # fuse_layer.append(
+                    #     nn.Sequential(
+                    #         spectral_norm(nn.Conv2d(
+                    #             num_inchannels[j],
+                    #             out_channels[i],
+                    #             1, 1, 0, bias=False
+                    #         ), True),nn.LeakyReLU(0.2, inplace=False)
+                    #     )
+                    # )
                 #  bigger scale to smaller scale
                 elif j < i:
                     # sequential strided conv
+                    temp_c = num_inchannels[j]
                     conv3x3s = []
 
                     # get the stride between the two stream
@@ -412,22 +420,24 @@ class TwoBranchModule(nn.Module):
                             conv3x3s.append(
                                 nn.Sequential(
                                     spectral_norm(nn.Conv2d(
-                                        num_inchannels[j],
-                                        out_channels[i],
+                                        temp_c,
+                                        # out_channels[i],
+                                        temp_c * 2,
                                         3, 2, 1, bias=False
-                                    ), True),nn.LeakyReLU(0.2, inplace=True)
+                                    ), True), nn.LeakyReLU(0.2, inplace=False)
                                 )
                             )
                         else:
                             conv3x3s.append(
                                 nn.Sequential(
                                     spectral_norm(nn.Conv2d(
-                                        num_inchannels[j],
-                                        num_inchannels[j],
+                                        temp_c,
+                                        temp_c * 2,
                                         3, 2, 1, bias=False
-                                    ), True),nn.LeakyReLU(0.2, inplace=True)
+                                    ), True), nn.LeakyReLU(0.2, inplace=False)
                                 )
                             )
+                            temp_c = temp_c * 2
                     fuse_layer.append(nn.Sequential(*conv3x3s))
 
                 # vice branch j for vice branch i
@@ -436,9 +446,9 @@ class TwoBranchModule(nn.Module):
                         nn.Sequential(
                             spectral_norm(nn.Conv2d(
                                 num_inchannels[j],
-                                out_channels[i],
+                                num_inchannels[j] * 2,
                                 3, 2, 1, bias=False
-                            ), True),nn.LeakyReLU(0.2, inplace=True),
+                            ), True), nn.LeakyReLU(0.2, inplace=False),
                         ))
             fuse_layers.append(nn.ModuleList(fuse_layer))
 
@@ -454,7 +464,8 @@ class TwoBranchModule(nn.Module):
         x_fuse = []
         # interactive module
         for i in range(len(self.fuse_layers)):
-            y = self.fuse_layers[i][0](x[0])
+            y = x[0] if i == 0 else self.fuse_layers[i][0](x[0])
+            # y = self.fuse_layers[i][0](x[0])
             for j in range(1, self.num_branches):
                 y1 = self.fuse_layers[i][j](x[j])
                 y = torch.cat((y, y1), 1)

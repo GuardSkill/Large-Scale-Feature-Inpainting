@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from .networks import  Discriminator, RFFNet
 from .loss import AdversarialLoss, PerceptualLoss, StyleLoss
-
+from torchsummary import summary
 
 class BaseModel(nn.Module):
     def __init__(self, name, config):
@@ -171,6 +171,7 @@ class InpaintingModel(BaseModel):
         # generator input: [rgb(3) + edge(1)+mask(1)]
         # discriminator input: [rgb(3)]
         generator = RFFNet(in_channels=3)
+        # summary(generator, input_size=(3, 256, 256))
         # generator = InpaintGenerator()
         discriminator = Discriminator(in_channels=3, use_sigmoid=config.GAN_LOSS != 'hinge')
         if len(config.GPU) > 1:
