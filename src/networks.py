@@ -50,7 +50,7 @@ class RFFNet(BaseNetwork):
         # stem net
 
         # get 32 dimention feature
-        self.layer1 = self._make_layer(32, stride=1)
+        self.layer1 = self._make_layer(3,32, stride=1)
 
         in_channels = [32]
         # num_blocks = [1]
@@ -77,29 +77,46 @@ class RFFNet(BaseNetwork):
             num_blocks, pre_stage_channels, out_channels, stage_index=2)
 
         # out_channels = [32, 512]
-        out_channels = [32, 512]
+        out_channels = [32, 256]
         # num_blocks = [2, 2]
         num_blocks = [4, 4]
 
         self.stage3, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=3)
 
-        self.final_layer = nn.Conv2d(
-            in_channels=pre_stage_channels[0],
-            out_channels=3,
-            kernel_size=1,
+        # self.final_layer = nn.Conv2d(
+        #     in_channels=pre_stage_channels[0],
+        #     out_channels=3,
+        #     kernel_size=1,
+        #     stride=1,
+        #     padding=0
+        # )
+        self.up_layer=nn.Upsample(scale_factor=2 << (4 - 1), mode='bilinear')
+        self.final_layer = nn.Sequential(spectral_norm(nn.Conv2d(
+            in_channels=out_channels[0]+out_channels[1],
+            out_channels=out_channels[0],
+            kernel_size=7,
             stride=1,
-            padding=0
-        )
+            padding=3
+        ),True),
+            nn.LeakyReLU(0.2, inplace=False),
+            nn.Conv2d(
+                in_channels=out_channels[0],
+                out_channels=3,
+                kernel_size=3,
+                stride=1,
+                padding=1))
+
+
         if init_weights:
             self.init_weights()
 
-    def _make_layer(self, out_channel, stride=1):
+    def _make_layer(self,in_channel, out_channel, stride=1):
         downsample = None
-        if stride != 1 or self.inplanes != out_channel:
-            downsample = nn.Conv2d(self.inplanes, out_channel, kernel_size=1, stride=stride,
+        if stride != 1 or in_channel != out_channel:
+            downsample = nn.Conv2d(in_channel, out_channel, kernel_size=1, stride=stride,
                                    padding=0, bias=False)
-        layer = BottleneckBlock(3, 32, stride=1, dilation=1, use_spectral_norm=True, downsample=downsample)
+        layer = BottleneckBlock(in_channel, out_channel, stride=1, dilation=1, use_spectral_norm=True, downsample=downsample)
         return layer
 
     def _make_stage(self, num_blocks, in_channels, out_channel, multi_scale_output=True, stage_index=0):
@@ -124,7 +141,9 @@ class RFFNet(BaseNetwork):
         x_list = self.stage1(x_list)
         x_list = self.stage2(x_list)
         x_list = self.stage3(x_list)
-        x = self.final_layer(x_list[0])
+        x_list[1] = self.up_layer(x_list[1])
+        x=torch.cat(x_list,1)
+        x=self.final_layer(x)
         x = (torch.tanh(x) + 1) / 2
         return x
 
@@ -243,7 +262,7 @@ class ResnetBlock(nn.Module):
             nn.ZeroPad2d(dilation),
             spectral_norm(nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3,
                                     padding=0, dilation=dilation, bias=not use_spectral_norm), use_spectral_norm),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.ZeroPad2d(1),
             spectral_norm(nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3,
                                     padding=0, dilation=1, bias=not use_spectral_norm), use_spectral_norm),
@@ -251,7 +270,7 @@ class ResnetBlock(nn.Module):
 
     def forward(self, x):
         out = x + self.conv_block(x)
-        out = nn.LeakyReLU(0.2, inplace=True)(out)
+        out = nn.LeakyReLU(0.2, inplace=False)(out)
         return out
 
 
@@ -267,7 +286,7 @@ class BottleneckBlock(nn.Module):
             spectral_norm(
                 nn.Conv2d(in_channels=in_channels, out_channels=out_channels * 2, kernel_size=3, stride=stride,
                           padding=0, dilation=dilation, bias=not use_spectral_norm), use_spectral_norm),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.LeakyReLU(0.2, inplace=False),
             nn.ZeroPad2d(1),
             spectral_norm(
                 nn.Conv2d(in_channels=out_channels * 2, out_channels=out_channels, kernel_size=3, stride=stride,
@@ -279,7 +298,7 @@ class BottleneckBlock(nn.Module):
         if self.downsample is not None:
             residual = self.downsample(x)
         out = self.conv_block(x) + residual
-        out = nn.LeakyReLU(0.2, inplace=True)(out)
+        out = nn.LeakyReLU(0.2, inplace=False)(out)
         return out
 
 
@@ -357,7 +376,7 @@ class TwoBranchModule(nn.Module):
                         nn.Conv2d(in_channels=in_c, out_channels=out_channels[branch_index],
                                   kernel_size=3, stride=1,
                                   padding=1, dilation=dilation, bias=not True), True),
-                    nn.LeakyReLU(0.2, inplace=True)
+                    nn.LeakyReLU(0.2, inplace=False)
                 ))
 
         return nn.Sequential(*layers)
@@ -392,7 +411,7 @@ class TwoBranchModule(nn.Module):
                             #     out_channels[i],
                             #     1, 1, 0, bias=False
                             # ), True),
-                            nn.LeakyReLU(0.2, inplace=False),
+                            # nn.LeakyReLU(0.2, inplace=False),
                             nn.Upsample(scale_factor=2 << (self.stage - 1), mode='bilinear')
                         )
                     )
