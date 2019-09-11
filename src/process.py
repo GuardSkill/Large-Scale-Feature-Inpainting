@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from .dataset import Dataset
 from .models import InpaintingModel
 from .utils import Progbar, create_dir, stitch_images, imsave
-from .metrics import PSNR, EdgeAccuracy, SSIM
+from .metrics import PSNR, SSIM
 from libs.logger import Logger
 
 
@@ -22,7 +22,6 @@ class CLFNet():
         self.psnr = PSNR(255.0).to(config.DEVICE)
         self.ssim = SSIM(window_size=11)
 
-        self.edgeacc = EdgeAccuracy(config.EDGE_THRESHOLD).to(config.DEVICE)
         val_sample = int(float((self.config.EVAL_INTERVAL)))
         # test mode
         if self.config.MODE == 2:
@@ -50,10 +49,10 @@ class CLFNet():
         self.logger = Logger(log_path)
 
     def load(self):
-            self.inpaint_model.load()
+        self.inpaint_model.load()
 
     def save(self, epoch):
-            self.inpaint_model.save(epoch)
+        self.inpaint_model.save(epoch)
 
     def train(self):
         train_loader = DataLoader(
@@ -76,7 +75,6 @@ class CLFNet():
             return
 
         print('\nThe number of Training data is %d' % total)
-
 
         epoch = self.inpaint_model.epoch + 1 if self.inpaint_model.epoch != None else 1
 
@@ -104,9 +102,10 @@ class CLFNet():
                 self.inpaint_model.backward(gen_loss, dis_loss)
                 if self.inpaint_model.iteration > step_per_epoch:
                     self.inpaint_model.iteration = 0
+                    iteration=0
                 iteration = self.inpaint_model.iteration
 
-                if iteration == 1:  # first time to train
+                if iteration == 1:  # first step in this epoch
                     for tag, value in logs.items():
                         logs_ave[tag] = value
                 else:
@@ -122,7 +121,7 @@ class CLFNet():
                     for tag, value in logs_ave.items():
                         self.logger.scalar_summary(tag, value / step_per_epoch, epoch)
 
-                    # max epoch
+                    # if reach max epoch
                     if epoch >= max_epoches:
                         keep_training = False
                         break
@@ -132,7 +131,7 @@ class CLFNet():
                     for tag, value in logs.items():
                         logs_ave[tag] = value
                     progbar = Progbar(step_per_epoch, width=30, stateful_metrics=['step'])
-                    self.inpaint_model.iteration += 1
+                    self.inpaint_model.iteration += 1  # jump to new epoch and set the iteration to 1
                     iteration += 1
                 logs['step'] = iteration
                 progbar.add(1,
@@ -304,7 +303,6 @@ class CLFNet():
             iteration = self.inpaint_model.iteration
             inputs = (images * masks) + (1 - masks)
             outputs = self.inpaint_model(images, masks).detach()
-
 
             if it is not None:
                 iteration = it

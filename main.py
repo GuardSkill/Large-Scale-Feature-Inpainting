@@ -8,7 +8,7 @@ from shutil import copyfile
 
 from tune_parameters import randomTune
 from src.config import Config
-from src.CLFModel import CLFNet
+from src.process import CLFNet
 from src.utils import *
 import os
 
@@ -21,7 +21,8 @@ def main(mode=None):
     """
 
     config = load_config(mode)
-    # cuda visble devices        # os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in config.GPU)
+    # set cuda visble devices from config file
+    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(e) for e in config.GPU)
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # init device
     if torch.cuda.is_available():

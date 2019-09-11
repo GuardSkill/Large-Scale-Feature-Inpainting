@@ -28,8 +28,9 @@ BATCH_SIZE: 6                 # input batch size for training
 INPUT_SIZE: 256               # input image size for training 0 for original size
 SIGMA: 2                      # standard deviation of the Gaussian filter used in Canny edge detector (0: random, -1: no edge)
 MAX_ITERS: 2e6                # maximum number of iterations to train the model
-MAX_STEPS: 3000               # maximum number of each epoch
+MAX_STEPS: 5000               # maximum number of each epoch
 MAX_EPOCHES: 100              # maximum number of epoches
+LOADWITHEPOCH: 1              # if load epoch when loading model 
 
 EDGE_THRESHOLD: 0.5           # edge detection threshold
 L1_LOSS_WEIGHT: 1             # l1 loss weight
@@ -44,5 +45,5 @@ GAN_POOL_SIZE: 0              # fake images pool size
 SAVE_INTERVAL: 1000           # how many iterations to wait before saving model (0: never)
 SAMPLE_INTERVAL: 1000         # how many iterations to wait before sampling (0: never)
 SAMPLE_SIZE: 12               # number of images to sample
-EVAL_INTERVAL: 4              # How many INTERVAL sample while valuation  (0: never  36000 in places)
+EVAL_INTERVAL: 20             # How many INTERVAL sample while valuation  (0: never  36000 in places)
 LOG_INTERVAL: 10              # how many iterations to wait before logging training status (0: never)

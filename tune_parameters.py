@@ -3,7 +3,7 @@ from src.utils import create_dir
 import numpy as np
 import os
 # do your thing with the hyper-parameters
-from src.CLFModel import CLFNet
+from src.process import CLFNet
 
 TRAIN_LOSS=True
 def randomTune(config):

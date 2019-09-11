@@ -77,27 +77,40 @@ class RFFNet(BaseNetwork):
             num_blocks, pre_stage_channels, out_channels, stage_index=2)
 
         # out_channels = [32, 512]
-        out_channels = [32, 256]
+        out_channels = [32, 512]
         # num_blocks = [2, 2]
         num_blocks = [4, 4]
 
         self.stage3, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=3)
 
-        # self.final_layer = nn.Conv2d(
-        #     in_channels=pre_stage_channels[0],
-        #     out_channels=3,
-        #     kernel_size=1,
-        #     stride=1,
-        #     padding=0
-        # )
-        self.up_layer=nn.Upsample(scale_factor=2 << (4 - 1), mode='bilinear')
+        up_factor=2<<3
+
+        sub_pixel = []
+        temp_c = out_channels[1]
+        for _ in range(4):
+            sub_pixel.append(
+                nn.Sequential(
+                    spectral_norm(
+                        nn.Conv2d(
+                            temp_c,
+                            int(temp_c / 2 * 2 ** 2),    #int(temp_c/2*2**2) (channel_num/2) * factor**2
+                            3, 1, 1, bias=False
+                        ), True),
+                    nn.LeakyReLU(0.2, inplace=False),
+                    nn.PixelShuffle(2)
+                )
+            )
+            temp_c = temp_c//2
+
+        self.up_layer=nn.Sequential(*sub_pixel)
+
         self.final_layer = nn.Sequential(spectral_norm(nn.Conv2d(
-            in_channels=out_channels[0]+out_channels[1],
+            in_channels=out_channels[0]*2,
             out_channels=out_channels[0],
-            kernel_size=7,
+            kernel_size=3,
             stride=1,
-            padding=3
+            padding=1
         ),True),
             nn.LeakyReLU(0.2, inplace=False),
             nn.Conv2d(
@@ -361,7 +374,7 @@ class TwoBranchModule(nn.Module):
         # stage >0, need concatenate
         if self.stage > 0:
             if branch_index == 0:
-                in_c = self.num_inchannels[0] + self.num_inchannels[1]
+                in_c = self.num_inchannels[0] + self.out_channels[0]
             else:
                 in_c = self.num_inchannels[0] * (1<<(self.stage + 1)) + self.num_inchannels[1] * 2
         else:
@@ -404,29 +417,27 @@ class TwoBranchModule(nn.Module):
             for j in range(num_branches):
                 #  smaller scale to  biger scale
                 if j > i:
-                    fuse_layer.append(
-                        nn.Sequential(
-                            # spectral_norm(nn.Conv2d(
-                            #     num_inchannels[j],
-                            #     out_channels[i],
-                            #     1, 1, 0, bias=False
-                            # ), True),
-                            # nn.LeakyReLU(0.2, inplace=False),
-                            nn.Upsample(scale_factor=2 << (self.stage - 1), mode='bilinear')
+                    sub_pixel = []
+                    temp_c = num_inchannels[j]
+                    for _ in range(self.stage):
+                        sub_pixel.append(
+                            nn.Sequential(
+                                spectral_norm(
+                                    nn.Conv2d(
+                                        temp_c,
+                                        temp_c*2,
+                                        3, 1, 1, bias=False
+                                    ), True),
+                                nn.LeakyReLU(0.2, inplace=False),
+                                nn.PixelShuffle(2)
+                            )
                         )
-                    )
+                        temp_c=temp_c//2
+                    fuse_layer.append(nn.Sequential(*sub_pixel))
+
                 # main branch
                 elif j == i == 0:
                     fuse_layer.append(None)
-                    # fuse_layer.append(
-                    #     nn.Sequential(
-                    #         spectral_norm(nn.Conv2d(
-                    #             num_inchannels[j],
-                    #             out_channels[i],
-                    #             1, 1, 0, bias=False
-                    #         ), True),nn.LeakyReLU(0.2, inplace=False)
-                    #     )
-                    # )
                 #  bigger scale to smaller scale
                 elif j < i:
                     # sequential strided conv
