@@ -80,8 +80,8 @@ class CLFNet():
 
         print('\nTraining epoch: %d' % epoch)
         progbar = Progbar(step_per_epoch, width=30, stateful_metrics=['step'])
+        logs_ave = {}
         while (keep_training):
-            logs_ave = {}
             for items in train_loader:
                 self.inpaint_model.train()
                 images, images_gray, edges, masks = self.cuda(*items)
@@ -137,6 +137,7 @@ class CLFNet():
                 progbar.add(1,
                             values=logs.items() if self.config.VERBOSE else [x for x in logs.items() if
                                                                              not x[0].startswith('l_')])
+            print("The whole data hase been trained %d times"%)
 
         print('\nEnd training....\n')
 
