@@ -2,8 +2,9 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from .networks import Discriminator, RFFNet
+from .networks import Discriminator, RFFNet, UnetGenerator, UnetGeneratorSame
 from .loss import AdversarialLoss, PerceptualLoss, StyleLoss
+import adabound
 
 
 class BaseModel(nn.Module):
@@ -61,7 +62,12 @@ class InpaintingModel(BaseModel):
 
         # generator input: [rgb(3) + edge(1)+mask(1)]
         # discriminator input: [rgb(3)]
-        generator = RFFNet(in_channels=3)
+        # generator = RFFNet(3,2)
+        generator = RFFNet(3, config.BLOCKS)
+        # generator=UnetGeneratorSame()
+        print("This Model Total params:", (sum([param.nelement() for param in generator.parameters()])))
+        # summary(generator, (3, 256, 256), 6,device='cpu')
+        # print(generator)
         discriminator = Discriminator(in_channels=3, use_sigmoid=config.GAN_LOSS != 'hinge')
         if len(config.GPU) > 1:
             generator = nn.DataParallel(generator, config.GPU)
@@ -91,6 +97,34 @@ class InpaintingModel(BaseModel):
             lr=float(config.LR) * float(config.D2G_LR),
             betas=(config.BETA1, config.BETA2)
         )
+
+
+        # self.gen_optimizer = optim.SGD(
+        #     params=generator.parameters(),
+        #     lr=float(config.LR),
+        #     momentum=config.BETA2
+        # )
+        #
+        # self.dis_optimizer = optim.SGD(
+        #     params=discriminator.parameters(),
+        #     lr=float(config.LR) * float(config.D2G_LR),
+        #     momentum=config.BETA2
+        # )
+
+        # self.gen_optimizer = optim,(
+        #     params=generator.parameters(),
+        #     lr=float(config.LR),
+        #     betas=(config.BETA1, config.BETA2)
+        # )
+        #
+        # self.dis_optimizer = optim.Adam(
+        #     params=discriminator.parameters(),
+        #     lr=float(config.LR) * float(config.D2G_LR),
+        #     betas=(config.BETA1, config.BETA2)
+        # )
+
+
+
 
     def process(self, images, masks):
         self.iteration += 1

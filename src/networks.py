@@ -43,7 +43,7 @@ class BaseNetwork(nn.Module):
 
 # receptive field fusion network
 class RFFNet(BaseNetwork):
-    def __init__(self, in_channels=3, init_weights=True):
+    def __init__(self, in_channels=3, number_b=4, init_weights=True):
         self.inplanes = in_channels
         super(RFFNet, self).__init__()
 
@@ -53,8 +53,7 @@ class RFFNet(BaseNetwork):
         self.layer1 = self._make_layer(3, 32, stride=1)
 
         in_channels = [32]
-        # num_blocks = [1]
-        num_blocks = [4]
+        num_blocks = [number_b]
         out_channels = [32, 64]
         # out_channels = [64, 64]
         self.stage0, pre_stage_channels = self._make_stage(
@@ -62,24 +61,21 @@ class RFFNet(BaseNetwork):
 
         out_channels = [32, 128]
         # out_channels = [64, 128]
-        num_blocks = [4, 4]
-        # num_blocks = [1, 1]
+        num_blocks = [number_b, number_b]
 
         self.stage1, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=1)
 
         # out_channels = [32, 256]
         out_channels = [32, 256]
-        num_blocks = [4, 4]
-        # num_blocks = [1, 1]
+        num_blocks = [number_b, number_b]
 
         self.stage2, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=2)
 
         # out_channels = [32, 512]
         out_channels = [32, 512]
-        # num_blocks = [2, 2]
-        num_blocks = [4, 4]
+        num_blocks = [number_b, number_b]
 
         self.stage3, pre_stage_channels = self._make_stage(
             num_blocks, pre_stage_channels, out_channels, stage_index=3)
@@ -117,12 +113,11 @@ class RFFNet(BaseNetwork):
             # nn.LeakyReLU(0.2, inplace=False),
             nn.Tanh(),
             spectral_norm(nn.Conv2d(
-                    in_channels=out_channels[0],
-                    out_channels=3,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1), True))
-
+                in_channels=out_channels[0],
+                out_channels=3,
+                kernel_size=3,
+                stride=1,
+                padding=1), True))
 
         if init_weights:
             self.init_weights()
@@ -215,6 +210,7 @@ class Discriminator(BaseNetwork):
 
         return outputs, [conv1, conv2, conv3, conv4, conv5]
 
+
 # Basic Block of residual network
 class ResnetBlock(nn.Module):
     def __init__(self, in_channels, dilation=1, use_spectral_norm=False):
@@ -233,7 +229,7 @@ class ResnetBlock(nn.Module):
     def forward(self, x):
         out = x + self.conv_block(x)
         # out = nn.LeakyReLU(0.2, inplace=False)(out)
-        out=nn.Tanh()(out)
+        out = nn.Tanh()(out)
         return out
 
 
@@ -263,7 +259,7 @@ class BottleneckBlock(nn.Module):
             residual = self.downsample(x)
         out = self.conv_block(x) + residual
         # out = nn.LeakyReLU(0.2, inplace=False)(out)
-        out=  nn.Tanh()(out)
+        out = nn.Tanh()(out)
         return out
 
 
@@ -480,56 +476,112 @@ class TwoBranchModule(nn.Module):
             raise ValueError(error_msg)
 
 
-# class DiscriminatorEnhanced(BaseNetwork):
-#     def __init__(self, in_channels, use_sigmoid=True, use_spectral_norm=True, init_weights=True):
-#         super(Discriminator, self).__init__()
-#         self.use_sigmoid = use_sigmoid
-#
-#         self.conv1 = self.features = nn.Sequential(
-#             spectral_norm(nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=5, stride=2, padding=1,
-#                                     bias=not use_spectral_norm), use_spectral_norm),
-#             nn.LeakyReLU(0.2, inplace=True),
-#         )
-#
-#         self.conv2 = nn.Sequential(
-#             spectral_norm(nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2, padding=1,
-#                                     bias=not use_spectral_norm), use_spectral_norm),
-#             nn.LeakyReLU(0.2, inplace=True),
-#         )
-#
-#         self.conv3 = nn.Sequential(
-#             spectral_norm(nn.Conv2d(in_channels=128, out_channels=256, kernel_size=5, stride=2, padding=1,
-#                                     bias=not use_spectral_norm), use_spectral_norm),
-#             nn.LeakyReLU(0.2, inplace=True),
-#         )
-#
-#         self.conv4 = nn.Sequential(
-#             spectral_norm(nn.Conv2d(in_channels=256, out_channels=512, kernel_size=5, stride=2, padding=1,
-#                                     bias=not use_spectral_norm), use_spectral_norm),
-#             nn.LeakyReLU(0.2, inplace=True),
-#         )
-#
-#         self.conv5 = nn.Sequential(
-#             spectral_norm(nn.Conv2d(in_channels=512, out_channels=256, kernel_size=5, stride=2, padding=1,
-#                                     bias=not use_spectral_norm), use_spectral_norm),
-#         )
-#         self.conv6 = nn.Sequential(
-#             spectral_norm(nn.Conv2d(in_channels=256, out_channels=256, kernel_size=5, stride=2, padding=1,
-#                                     bias=not use_spectral_norm), use_spectral_norm),
-#         )
-#
-#         if init_weights:
-#             self.init_weights()
-#
-#     def forward(self, x):
-#         conv1 = self.conv1(x)
-#         conv2 = self.conv2(conv1)
-#         conv3 = self.conv3(conv2)
-#         conv4 = self.conv4(conv3)
-#         conv5 = self.conv5(conv4)
-#         conv6 = self.conv6(conv5)
-#         outputs = conv6
-#         if self.use_sigmoid:
-#             outputs = torch.sigmoid(conv5)
-#
-#         return outputs, [conv1, conv2, conv3, conv4, conv5, conv6]
+class UnetGenerator(BaseNetwork):
+    def __init__(self, residual_blocks=8, init_weights=True):
+        super(UnetGenerator, self).__init__()
+
+        self.encoder = nn.Sequential(
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, padding=0),
+            nn.InstanceNorm2d(64, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(128, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(256, track_running_stats=False),
+            nn.ReLU(True)
+        )
+
+        blocks = []
+        for _ in range(residual_blocks):
+            block = ResnetBlock(256, 2)
+            blocks.append(block)
+
+        self.middle = nn.Sequential(*blocks)
+
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(128, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(64, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(in_channels=64, out_channels=3, kernel_size=7, padding=0),
+        )
+
+        if init_weights:
+            self.init_weights()
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.middle(x)
+        x = self.decoder(x)
+        x = (torch.tanh(x) + 1) / 2
+
+        return x
+
+
+# Unet network for similar parameter number
+class UnetGeneratorSame(BaseNetwork):
+    def __init__(self, residual_blocks=4, init_weights=True):
+        super(UnetGeneratorSame, self).__init__()
+
+        self.encoder = nn.Sequential(
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, padding=0),
+            nn.InstanceNorm2d(64, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(128, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(256, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(256, track_running_stats=False),
+            nn.ReLU(True)
+        )
+
+        blocks = []
+        for _ in range(residual_blocks):
+            block = ResnetBlock(512, 2)
+            blocks.append(block)
+
+        self.middle = nn.Sequential(*blocks)
+
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=512, out_channels=256, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(128, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(128, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=4, stride=2, padding=1),
+            nn.InstanceNorm2d(64, track_running_stats=False),
+            nn.ReLU(True),
+
+            nn.ReflectionPad2d(3),
+            nn.Conv2d(in_channels=64, out_channels=3, kernel_size=7, padding=0),
+        )
+
+        if init_weights:
+            self.init_weights()
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.middle(x)
+        x = self.decoder(x)
+        x = (torch.tanh(x) + 1) / 2
+
+        return x

@@ -18,19 +18,20 @@ class CLFNet():
         self.debug = False
         self.model_name = model_name
         self.inpaint_model = InpaintingModel(config).to(config.DEVICE)
-
+        # summary(InpaintingModel, (3, 256, 256), 6)
+        # print(InpaintingModel)
         self.psnr = PSNR(255.0).to(config.DEVICE)
         self.ssim = SSIM(window_size=11)
 
         val_sample = int(float((self.config.EVAL_INTERVAL)))
         # test mode
         if self.config.MODE == 2:
-            self.test_dataset = Dataset(config, config.TEST_FLIST, config.TEST_EDGE_FLIST, config.TEST_MASK_FLIST,
+            self.test_dataset = Dataset(config, config.TEST_FLIST, config.TEST_MASK_FLIST,
                                         augment=False, training=False)
         else:
-            self.train_dataset = Dataset(config, config.TRAIN_FLIST, config.TRAIN_EDGE_FLIST, config.TRAIN_MASK_FLIST,
+            self.train_dataset = Dataset(config, config.TRAIN_FLIST, config.TRAIN_MASK_FLIST,
                                          augment=True, training=True)
-            self.val_dataset = Dataset(config, config.VAL_FLIST, config.VAL_EDGE_FLIST, config.VAL_MASK_FLIST,
+            self.val_dataset = Dataset(config, config.VAL_FLIST, config.VAL_MASK_FLIST,
                                        augment=False, training=True, sample_interval=val_sample)
             self.sample_iterator = self.val_dataset.create_iterator(config.SAMPLE_SIZE)
 
@@ -81,10 +82,11 @@ class CLFNet():
         print('\nTraining epoch: %d' % epoch)
         progbar = Progbar(step_per_epoch, width=30, stateful_metrics=['step'])
         logs_ave = {}
+        train_times = 0
         while (keep_training):
             for items in train_loader:
                 self.inpaint_model.train()
-                images, images_gray, edges, masks = self.cuda(*items)
+                images, images_gray, masks = self.cuda(*items)
                 # edge model
                 # inpaint model
 
@@ -94,15 +96,15 @@ class CLFNet():
 
                 # metrics
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
-                mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 logs['psnr'] = psnr.item()
-                logs['mae'] = mae.item()
+                # logs['mae'] = mae.item()
 
                 # backward
                 self.inpaint_model.backward(gen_loss, dis_loss)
                 if self.inpaint_model.iteration > step_per_epoch:
                     self.inpaint_model.iteration = 0
-                    iteration=0
+                    iteration = 0
                 iteration = self.inpaint_model.iteration
 
                 if iteration == 1:  # first step in this epoch
@@ -137,7 +139,8 @@ class CLFNet():
                 progbar.add(1,
                             values=logs.items() if self.config.VERBOSE else [x for x in logs.items() if
                                                                              not x[0].startswith('l_')])
-            print("The whole data hase been trained %d times"%)
+            train_times += 1
+            print("The whole data hase been trained %d times" % train_times)
 
         print('\nEnd training....\n')
 
@@ -156,10 +159,11 @@ class CLFNet():
 
         progbar = Progbar(int(total / self.config.BATCH_SIZE), width=30, stateful_metrics=['step'])
         iteration = 0
+        logs_ave = {}
         with torch.no_grad():
             for items in self.val_loader:
                 iteration += 1
-                images, images_gray, edges, masks = self.cuda(*items)
+                images, images_gray, masks = self.cuda(*items)
                 # inpaint model
                 # eval
                 outputs, gen_loss, dis_loss, logs = self.inpaint_model.process(images, masks)
@@ -194,19 +198,17 @@ class CLFNet():
         create_dir(mask_dir)
         inpainted_dir = os.path.join(self.results_path, "inpainted")
         create_dir(inpainted_dir)
-        damaged_edge_dir = os.path.join(self.results_path, "damaged_edge")
-        create_dir(damaged_edge_dir)
         raw_dir = os.path.join(self.results_path, "raw")
         create_dir(raw_dir)
 
-        model = self.config.MODEL
+        model = self.config.MODEL  # Discard
         create_dir(self.results_path)
-        sample_interval = 1000
+        sample_interval = 1
         batch_size = 1
         test_loader = DataLoader(
             dataset=self.test_dataset,
             batch_size=batch_size,
-            num_workers=12,
+            num_workers=1,
             shuffle=False
         )
 
@@ -217,75 +219,48 @@ class CLFNet():
         with torch.no_grad():
             for items in test_loader:
                 name = self.test_dataset.load_name(index)
-                images, images_gray, edges, masks = self.cuda(*items)
+                images, images_gray, masks = self.cuda(*items)
 
-                path = os.path.join(damaged_dir, name)
-                damaged_img = self.postprocess(images * masks + (1 - masks))[0]
-                imsave(damaged_img, path)
-                path = os.path.join(damaged_edge_dir, name)
-                damaged_img = self.postprocess(edges * masks + (1 - masks))[0]
-                imsave(damaged_img, path)
-                path = os.path.join(mask_dir, name)
-                imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
-                path = os.path.join(raw_dir, name)
-                img = self.postprocess(images)[0]
-                imsave(img, path)
-                # print(index, name)
+                # Save damaged image
+                if model == 2:
+                    path = os.path.join(damaged_dir, name)
+                    damaged_img = self.postprocess(images * masks + (1 - masks))[0]
+                    imsave(damaged_img, path)
+                    # Save masks
+                    path = os.path.join(mask_dir, name)
+                    imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
+                    # Save Ground Truth
+                    path = os.path.join(raw_dir, name)
+                    img = self.postprocess(images)[0]
+                    imsave(img, path)
+                    # print(index, name)
 
                 index += 1
                 if index > total / batch_size / sample_interval:
                     break;
                 logs = {}
-                # edge model
-                if model == 1:
-                    outputs = self.edge_model(images_gray, edges, masks)
-                    outputs_merged = (outputs * (1 - masks)) + (edges * masks)
-
-                # inpaint model
-                elif model == 2:
-                    outputs = self.inpaint_model(images, edges, masks)
-                    outputs_merged = (outputs * (1 - masks)) + (images * masks)
-
-                # edge-inpaint model
-                elif model == 3:
-                    outputs = self.edge_model(images_gray, edges, masks).detach()
-                    outputs_merged = (outputs * (1 - masks)) + (edges * masks)
-                    edge_save = self.color_the_edge(outputs, edges, masks)
-                    edge_save = self.postprocess(edge_save)[0]
-                    path = os.path.join(self.results_path + "/edge_inpainted", name)
-                    # print(index, name)
-                    imsave(edge_save, path)
-                    outputs = self.inpaint_model(images, outputs_merged, masks)
-                    outputs_merged = (outputs * (1 - masks)) + (images * masks)
-
-
-
-                # joint model
-                else:
-                    edges = self.edge_model(images_gray, edges, masks).detach()
-                    outputs = self.inpaint_model(images, edges, masks)
-                    outputs_merged = (outputs * (1 - masks)) + (images * masks)
+                # run model
+                outputs = self.inpaint_model(images, masks)
+                outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                 output = self.postprocess(outputs_merged)[0]
                 path = os.path.join(inpainted_dir, name)
                 # print(index, name)
                 imsave(output, path)
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
-                mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
+                l1=torch.nn.L1Loss()(images,outputs_merged)
                 one_ssim = self.ssim(images, outputs_merged)
                 logs["psnr"] = psnr.item()
-                logs["mae"] = mae.item()
+                # logs["mae"] = mae.item()
+                logs["L1"] = l1.item()
                 logs["ssim"] = one_ssim.item()
                 logs["step"] = index
                 progbar.add(1, values=logs.items())
 
                 if self.debug:
-                    edges = self.postprocess(1 - edges)[0]
-                    masked = self.postprocess(images * (masks) + (1 - masks))[0]
-                    fname, fext = name.split('.')
-
-                    imsave(edges, os.path.join(self.results_path, fname + '_edge.' + fext))
-                    imsave(masked, os.path.join(self.results_path, fname + '_masked.' + fext))
+                    pass
 
         print('\nEnd test....')
 
@@ -299,7 +274,7 @@ class CLFNet():
         model = self.config.MODEL
         with torch.no_grad():
             items = next(self.sample_iterator)
-            images, images_gray, edges, masks = self.cuda(*items)
+            images, images_gray, masks = self.cuda(*items)
             # (batch,channels,weighth,length)
             iteration = self.inpaint_model.iteration
             inputs = (images * masks) + (1 - masks)

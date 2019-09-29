@@ -15,24 +15,19 @@ import torch.utils.data.sampler
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, config, flist, edge_flist, mask_flist, augment=True, training=True, sample_interval=1):
+    def __init__(self, config, flist, mask_flist, augment=True, training=True, sample_interval=1):
         super(Dataset, self).__init__()
         self.augment = augment
         self.training = training
-        self.data = self.load_flist(flist)[0::sample_interval]
-        self.edge_data = self.load_flist(edge_flist)[0::sample_interval]
-        self.mask_data = self.load_flist(mask_flist)
-
         self.input_size = config.INPUT_SIZE
-        self.sigma = config.SIGMA
-        self.edge = config.EDGE
         self.mask = config.MASK
-        self.nms = config.NMS
 
+        self.data = self.load_flist(flist)[0::sample_interval]
+        self.mask_data = self.load_flist(mask_flist)
         # in somne test mode, there's a one-to-one relationship between mask and image
         # masks are loaded non random
-        if config.MODE == 2:
-            self.mask = 6
+        # if config.MODE == 2:
+        #     self.mask = 6
 
     def __len__(self):
         return len(self.data)
@@ -71,52 +66,17 @@ class Dataset(torch.utils.data.Dataset):
         # load mask
         mask = self.load_mask(img, index)
 
-        # load edge
-        edge = self.load_edge(img_gray, index, mask)
-
         # augment data
         # flap
         if self.augment and np.random.binomial(1, 0.5) > 0:
             img = img[:, ::-1, ...]
             img_gray = img_gray[:, ::-1, ...]
-            edge = edge[:, ::-1, ...]
             mask = mask[:, ::-1, ...]
         # rotate mask
         if self.augment:
-            rotation_rand=np.random.randint(4, size=None)
-            mask=np.rot90(mask,rotation_rand,axes=(0,1))
-        return self.to_tensor(img), self.to_tensor(img_gray), self.to_tensor(edge), self.to_tensor(mask)
-
-    def load_edge(self, img, index, mask):
-        sigma = self.sigma
-
-        # in test mode images are masked (with masked regions),
-        # using 'mask' parameter prevents canny to detect edges for the masked regions
-        mask = None if self.training else (1 - mask / 255).astype(np.bool)
-
-        # canny
-        if self.edge == 1:
-            # no edge
-            if sigma == -1:
-                return np.zeros(img.shape).astype(np.float)
-
-            # random sigma
-            if sigma == 0:
-                sigma = random.randint(1, 4)
-
-            return canny(img, sigma=sigma, mask=mask).astype(np.float)
-
-        # external
-        else:
-            imgh, imgw = img.shape[0:2]
-            edge = imread(self.edge_data[index])
-            edge = self.resize(edge, imgh, imgw)
-
-            # non-max suppression
-            if self.nms == 1:
-                edge = edge * canny(img, sigma=sigma, mask=mask)
-
-            return edge
+            rotation_rand = np.random.randint(4, size=None)
+            mask = np.rot90(mask, rotation_rand, axes=(0, 1))
+        return self.to_tensor(img), self.to_tensor(img_gray), self.to_tensor(mask)
 
     def load_mask(self, img, index):
         imgh, imgw = img.shape[0:2]

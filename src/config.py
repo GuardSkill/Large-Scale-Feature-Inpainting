@@ -36,28 +36,24 @@ class Config(dict):
 
 DEFAULT_CONFIG = {
     'MODE': 1,  # 1: train, 2: test, 3: eval
-    'MODEL': 1,  # 1: edge model, 2: inpaint model, 3: edge-inpaint model, 4: joint model
     'MASK': 3,  # 1: random block, 2: half, 3: external, 4: (external, random block), 5: (external, random block, half)
-    'EDGE': 1,  # 1: canny, 2: external
-    'NMS': 1,  # 0: no non-max-suppression, 1: applies non-max-suppression on the external edges by multiplying by Canny
     'SEED': 10,  # random seed
     'GPU': [0],  # list of gpu ids
     'DEBUG': 0,  # turns on debugging mode
     'VERBOSE': 0,  # turns on verbose mode in the output console
 
+    'BLOCKS': 4,                      # set the res block in each stage
     'LR': 0.0001,  # learning rate
     'D2G_LR': 0.1,  # discriminator/generator learning rate ratio
     'BETA1': 0.0,  # adam optimizer beta1
     'BETA2': 0.9,  # adam optimizer beta2
     'BATCH_SIZE': 8,  # input batch size for training
     'INPUT_SIZE': 256,  # input image size for training 0 for original size
-    'SIGMA': 2,  # standard deviation of the Gaussian filter used in Canny edge detector (0: random, -1: no edge)
     'MAX_ITERS': 2e6,  # maximum number of iterations to train the model
-    'MAX_STEPS': 5000,
-    'MAX_EPOCHES': 40,
-    'LOADWITHEPOCH':0,
+    'MAX_STEPS': 5000,    # maximum number of each epoch
+    'MAX_EPOCHES': 40,    # maximum number of epoches
+    'LOADWITHEPOCH':0,   # if load epoch when loading model
 
-    'EDGE_THRESHOLD': 0.5,  # edge detection threshold
     'L1_LOSS_WEIGHT': 1,  # l1 loss weight
     'FM_LOSS_WEIGHT': 10,  # feature-matching loss weight
     'STYLE_LOSS_WEIGHT': 1,  # style loss weight

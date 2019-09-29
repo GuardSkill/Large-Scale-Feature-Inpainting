@@ -27,7 +27,7 @@ def main(mode=None):
     # init device
     if torch.cuda.is_available():
         config.DEVICE = torch.device("cuda")
-        torch.backends.cudnn.benchmark = True   # cudnn auto-tuner
+        torch.backends.cudnn.benchmark = True  # cudnn auto-tuner
     else:
         config.DEVICE = torch.device("cpu")
     # set cv2 running threads to 1 (prevents deadlocks with pytorch dataloader)
@@ -38,7 +38,6 @@ def main(mode=None):
     np.random.seed(config.SEED)
     random.seed(config.SEED)
 
-
     # tune parameters
     # randomT0une(config)
 
@@ -46,10 +45,9 @@ def main(mode=None):
     model = CLFNet(config)
     model.load()
 
-
     # model training
     if config.MODE == 1:
-        config.print()
+        # config.print()
         print('\nstart training...\n')
         model.train()
 
@@ -72,9 +70,9 @@ def load_config(mode=None):
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', '--checkpoints', type=str, default='./checkpoints', help='model checkpoints path (default: ./checkpoints)')
-    parser.add_argument('--model', type=int, choices=[1, 2, 3, 4], help='1: edge model, 2: inpaint model, 3: edge-inpaint model, 4: joint model')
-    parser.add_argument('--output', type=str, default='./output',help='path to the output directory')
+    parser.add_argument('--path', '--checkpoints', type=str, default='./checkpoints',
+                        help='model checkpoints path (default: ./checkpoints)')
+    parser.add_argument('--output', type=str, default='./output', help='path to the output directory')
 
     # test mode
     if mode == 2:
@@ -92,23 +90,16 @@ def load_config(mode=None):
     if not os.path.exists(config_path):
         copyfile('./config.yml.example', config_path)
 
-    #mkdir
-    create_dir(args.output + "/edge_inpainted")
-    create_dir(args.output + "/edge")
-
     # load config file
     config = Config(config_path)
 
     # train mode
     if mode == 1:
         config.MODE = 1
-        if args.model:
-            config.MODEL = args.model
 
     # test mode
     elif mode == 2:
         config.MODE = 2
-        config.MODEL = args.model if args.model is not None else 3
         config.INPUT_SIZE = 0
 
         if args.input is not None:
@@ -126,7 +117,6 @@ def load_config(mode=None):
     # eval mode
     elif mode == 3:
         config.MODE = 3
-        config.MODEL = args.model if args.model is not None else 3
 
     return config
 
