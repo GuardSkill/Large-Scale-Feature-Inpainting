@@ -48,7 +48,7 @@ def randomTune(config):
                 #                                                          2)  # Sample regularization candidates in the range (1 to 200)
                 # config.INPAINT_ADV_LOSS_WEIGHT = 10 ** np.random.uniform(-1,
                 #                                                  1)  # Sample regularization candidates in the range (1 to 200)
-        model = EdgeConnect(config)
+        model = CLFNet(config)
         model.load()
         # config.print()
         print('\nEx %d: learning_rate:%f  D_Learning_rate: %f:' % (i, config.LR, config.D2G_LR))

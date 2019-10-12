@@ -2,9 +2,10 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from .networks import Discriminator, RFFNet, UnetGenerator, UnetGeneratorSame
+
+from ablation.network_fusion import RFFNet_fusion
+from .networks import Discriminator, UnetGenerator, UnetGeneratorSame, RFFNet
 from .loss import AdversarialLoss, PerceptualLoss, StyleLoss
-import adabound
 
 
 class BaseModel(nn.Module):
@@ -64,7 +65,7 @@ class InpaintingModel(BaseModel):
         # discriminator input: [rgb(3)]
         # generator = RFFNet(3,2)
         generator = RFFNet(3, config.BLOCKS)
-        # generator=UnetGeneratorSame()
+        # generator=UnetGeneratorSame()       Unet-lile generator
         print("This Model Total params:", (sum([param.nelement() for param in generator.parameters()])))
         # summary(generator, (3, 256, 256), 6,device='cpu')
         # print(generator)
@@ -97,34 +98,6 @@ class InpaintingModel(BaseModel):
             lr=float(config.LR) * float(config.D2G_LR),
             betas=(config.BETA1, config.BETA2)
         )
-
-
-        # self.gen_optimizer = optim.SGD(
-        #     params=generator.parameters(),
-        #     lr=float(config.LR),
-        #     momentum=config.BETA2
-        # )
-        #
-        # self.dis_optimizer = optim.SGD(
-        #     params=discriminator.parameters(),
-        #     lr=float(config.LR) * float(config.D2G_LR),
-        #     momentum=config.BETA2
-        # )
-
-        # self.gen_optimizer = optim,(
-        #     params=generator.parameters(),
-        #     lr=float(config.LR),
-        #     betas=(config.BETA1, config.BETA2)
-        # )
-        #
-        # self.dis_optimizer = optim.Adam(
-        #     params=discriminator.parameters(),
-        #     lr=float(config.LR) * float(config.D2G_LR),
-        #     betas=(config.BETA1, config.BETA2)
-        # )
-
-
-
 
     def process(self, images, masks):
         self.iteration += 1
