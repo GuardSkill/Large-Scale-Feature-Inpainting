@@ -1,22 +1,24 @@
-##   Contextual Inpianiting with Sketch Reconstruction and Feature Selection
+##   Interactive Fusion Network for High-Resolution Image Inpainting
  [BibTex](#citation)
+
+
 ### Introduction:
 
 <p align='center'>  
-  <img src='' width=''/>
+  <img src='https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/images/Framework.png' width='870'/>
 </p>
-(a) Input images with missing regions. The missing regions are depicted in white. (b) Computed edge masks. Edges drawn in black are computed (for the available regions) using Canny edge detector; whereas edges shown in blue are hallucinated by the edge generator network. (c) Image inpainting results of the proposed approach.
+The framework of Interactive Fusion Network, which is used to replace the generator of the inpainting architecture.
 
 ## Prerequisites
-- Python 3
-- PyTorch 1.0
+- Python 3.6
+- PyTorch 1.0 （The version MUST >=1.0）
 - NVIDIA GPU + CUDA cuDNN
 
 ## Installation
 - Clone this repo:
 ```bash
-git clone https://github.com/knazeri/edge-connect.git
-cd edge-connect
+git clone https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
+cd Large-Scale-Feature-Inpainting
 ```
 - Install PyTorch and dependencies from http://pytorch.org
 - Install python requirements:
@@ -26,7 +28,7 @@ pip install -r requirements.txt
 
 ## Datasets
 ### 1) Images
-We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) and [Paris Street-View](https://github.com/pathak22/context-encoder) datasets. To train a model on the full dataset, download datasets from official websites. 
+We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) datasets. To train a model on the full dataset, download datasets from official websites. 
 
 After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists. For example, to generate the training set file list on Places2 dataset run:
 ```bash
@@ -41,32 +43,22 @@ Our model is trained on the irregular mask dataset provided by [Liu et al.](http
 
 Alternatively, you can download [Quick Draw Irregular Mask Dataset](https://github.com/karfly/qd-imd) by Karim Iskakov which is combination of 50 million strokes drawn by human hand.
 
+We additional provide the [code](https://github.com/GuardSkill/AITools/blob/master/image/divide_dataset.py) for dividing the mask maps int to 4 class according to proportion of their corrupted region. (https://arxiv.org/abs/1804.07723)
+
 Please use [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set masks file lists as explained above.
 
 ## Getting Started
 Download the pre-trained models using the following links and copy them under `./checkpoints` directory.
 
-[Places2](https://drive.google.com/drive/folders/1KyXz4W4SAvfsGh3NJ7XgdOv5t46o-8aa) | [CelebA](https://drive.google.com/drive/folders/1nkLOhzWL-w2euo0U6amhz7HVzqNC5rqb) | [Paris-StreetView](https://drive.google.com/drive/folders/1cGwDaZqDcqYU7kDuEbMXa9TP3uDJRBR1)
-
-Alternatively, you can run the following script to automatically download the pre-trained models:
-```bash
-bash ./scripts/download_model.sh
-```
+[Places2](https://drive.google.com/drive/folders/1KyXz4W4SAvfsGh3NJ7XgdOv5t46o-8aa) | [CelebA](https://drive.google.com/drive/folders/1nkLOhzWL-w2euo0U6amhz7HVzqNC5rqb)
 
 ### 1) Training
-To train the model, create a `config.yaml` file similar to the [example config file](https://github.com/knazeri/edge-connect/blob/master/config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
+To train the model, create a `config.yaml` file similar to the [example config file](https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
 
-EdgeConnect is trained in three stages: 1) training the edge model, 2) training the inpaint model and 3) training the joint model. To train the model:
+To train the ISNet:
 ```bash
-python train.py --model [stage] --checkpoints [path to checkpoints]
+python train.py --checkpoints [path to checkpoints]
 ```
-
-For example to train the edge model on Places2 dataset under `./checkpoints/places2` directory:
-```bash
-python train.py --model 1 --checkpoints ./checkpoints/places2
-```
-
-Convergence of the model differs from dataset to dataset. For example Places2 dataset converges in one of two epochs, while smaller datasets like CelebA require almost 40 epochs to converge. You can set the number of training iterations by changing `MAX_ITERS` value in the configuration file.
 
 ### 2) Testing
 To test the model, create a `config.yaml` file similar to the [example config file](config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
@@ -104,22 +96,34 @@ To measure the Fréchet Inception Distance (FID score) run [`./scripts/fid_score
 python ./scripts/fid_score.py --path [path to validation, path to model output] --gpu [GPU id to use]
 ```
 
-### Code Copyright
-Most of network code come from this github [repository](https://github.com/knazeri/edge-connect).
 
 ### Model Configuration
 
 The model configuration is stored in a [`config.yaml`](config.yml.example) file under your checkpoints directory. The following tables provide the documentation for all the options available in the configuration file:
+
+
+## License
+
+Licensed under a [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/).
+
+Except where otherwise noted, this content is published under a [CC BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) license, which means that you can copy, remix, transform and build upon the content as long as you do not use the material for commercial purposes and give appropriate credit and provide a link to the license.
+
+Lots of logic code and readme file comes from [Edge-Connect](https://github.com/knazeri/edge-connect), we sincerely thanks their contribution.
+
+
+## Citation
+If you use this code for your research, please cite our paper <a href="https://">g</a>:
+
+```
+
+```
 
 #### General Model Configurations
 
 Option          | Description
 ----------------| -----------
 MODE            | 1: train, 2: test, 3: eval
-MODEL           | 1: edge model, 2: inpaint model, 3: edge-inpaint model, 4: joint model
 MASK            | 1: random block, 2: half, 3: external, 4: external + random block, 5: external + random block + half
-EDGE            | 1: canny, 2: external
-NMS             | 0: no non-max-suppression, 1: non-max-suppression on the external edges
 SEED            | random number generator seed
 GPU             | list of gpu ids, comma separated list e.g. [0,1]
 DEBUG           | 0: no debug, 1: debugging mode
@@ -132,9 +136,6 @@ Option          | Description
 TRAIN_FLIST     | text file containing training set files list
 VAL_FLIST       | text file containing validation set files list
 TEST_FLIST      | text file containing test set files list
-TRAIN_EDGE_FLIST| text file containing training set external edges files list (only with EDGE=2)
-VAL_EDGE_FLIST  | text file containing validation set external edges files list (only with EDGE=2)
-TEST_EDGE_FLIST | text file containing test set external edges files list (only with EDGE=2)
 TRAIN_MASK_FLIST| text file containing training set masks files list (only with MASK=3, 4, 5)
 VAL_MASK_FLIST  | text file containing validation set masks files list (only with MASK=3, 4, 5)
 TEST_MASK_FLIST | text file containing test set masks files list (only with MASK=3, 4, 5)
@@ -149,11 +150,9 @@ BETA1                  | 0.0   | adam optimizer beta1
 BETA2                  | 0.9   | adam optimizer beta2
 BATCH_SIZE             | 8     | input batch size 
 INPUT_SIZE             | 256   | input image size for training. (0 for original size)
-SIGMA                  | 2     | standard deviation of the Gaussian filter used in Canny edge detector </br>(0: random, -1: no edge)
 MAX_ITERS              | 2e6   | maximum number of iterations to train the model
 MAX_STEPS:             | 5000  |maximum number of each epoch
 MAX_EPOCHES:           | 100   |maximum number of epoches  100
-EDGE_THRESHOLD         | 0.5   | edge detection threshold (0-1)
 L1_LOSS_WEIGHT         | 1     | l1 loss weight
 FM_LOSS_WEIGHT         | 10    | feature-matching loss weight
 STYLE_LOSS_WEIGHT      | 1     | style loss weight
@@ -166,15 +165,3 @@ EVAL_INTERVAL          | 0     | how many iterations to wait before evaluating t
 SAMPLE_INTERVAL        | 1000  | how many iterations to wait before saving sample (0: never)
 SAMPLE_SIZE            | 12    | number of images to sample on each samling interval
 EVAL_INTERVAL          | 3     | How many INTERVAL sample while valuation  (0: never  36000 in places)
-## License
-Licensed under a [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/).
-
-Except where otherwise noted, this content is published under a [CC BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) license, which means that you can copy, remix, transform and build upon the content as long as you do not use the material for commercial purposes and give appropriate credit and provide a link to the license.
-
-
-## Citation
-If you use this code for your research, please cite our paper <a href="https://">g</a>:
-
-```
-
-```
