@@ -100,7 +100,7 @@ def load_config(mode=None):
     # test mode
     elif mode == 2:
         config.MODE = 2
-        config.INPUT_SIZE = 0
+        # config.INPUT_SIZE = 0         Set to 0 for one to one mapping
 
         if args.input is not None:
             config.TEST_FLIST = args.input

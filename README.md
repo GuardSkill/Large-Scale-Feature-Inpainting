@@ -20,7 +20,7 @@ The framework of Interactive Fusion Network, which is used to replace the genera
 git clone https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
 cd Large-Scale-Feature-Inpainting
 ```
-- Install PyTorch and dependencies from http://pytorch.org
+- Install [PyTorch](http://pytorch.org).
 - Install python requirements:
 ```bash
 pip install -r requirements.txt
@@ -30,12 +30,12 @@ pip install -r requirements.txt
 ### 1) Images
 We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) datasets. To train a model on the full dataset, download datasets from official websites. 
 
-After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists. For example, to generate the training set file list on Places2 dataset run:
+After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists for images and masks. For example, to generate the training set file list on Places2 dataset run:
 ```bash
 mkdir datasets
 python ./scripts/flist.py --path path_to_places2_train_set --output ./datasets/places2_train.flist
-python ./scripts/flist.py --path path_to_places2_train_set --output ./datasets/places2_edges_val.flist
-python ./scripts/flist.py --path path_to_places2_train_set --output ./datasets/masks_test.flist
+python ./scripts/flist.py --path path_to_places2_validation_set --output ./datasets/places2_val.flist
+python ./scripts/flist.py --path path_to_places2_test_set --output ./datasets/masks_test.flist
 ```
 
 ### 2) Irregular Masks
@@ -43,14 +43,14 @@ Our model is trained on the irregular mask dataset provided by [Liu et al.](http
 
 Alternatively, you can download [Quick Draw Irregular Mask Dataset](https://github.com/karfly/qd-imd) by Karim Iskakov which is combination of 50 million strokes drawn by human hand.
 
-We additional provide the [code](https://github.com/GuardSkill/AITools/blob/master/image/divide_dataset.py) for dividing the mask maps int to 4 class according to proportion of their corrupted region. (https://arxiv.org/abs/1804.07723)
+We additionally provide the [code](https://github.com/GuardSkill/AITools/blob/master/image/divide_dataset.py) for dividing the mask maps into to 4 class according to proportion of their corrupted region.
 
-Please use [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set masks file lists as explained above.
 
 ## Getting Started
 Download the pre-trained models using the following links and copy them under `./checkpoints` directory.
 
-[Places2](https://drive.google.com/drive/folders/1KyXz4W4SAvfsGh3NJ7XgdOv5t46o-8aa) | [CelebA](https://drive.google.com/drive/folders/1nkLOhzWL-w2euo0U6amhz7HVzqNC5rqb)
+Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng)
+Pretrained on CelebA:  [mega](https://drive.google.com/file/d/1opkFszQr9lSKfaoop-RYbu5LRNrZim27/view?usp=sharing) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing)
 
 ### 1) Training
 To train the model, create a `config.yaml` file similar to the [example config file](https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
@@ -60,13 +60,18 @@ To train the ISNet:
 python train.py --checkpoints [path to checkpoints]
 ```
 
-### 2) Testing
+### 2) Evaluation and Testing  
 To test the model, create a `config.yaml` file similar to the [example config file](config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
 
-You can test the model on all three stages: 1) edge model, 2) inpaint model and 3) joint model. In each case, you need to provide an input image (image with a mask) and a grayscale mask file. Please make sure that the mask file covers the entire mask region in the input image. To test the model:
+You can evaluate the test dataset which list file path is recorded in `config.yaml` by this command:
 ```bash
 python test.py \
-  --model [stage] \
+--path ./checkpoints/Celeba
+```
+
+You can test the model for some specific images and masks, you need to provide an input image and a binary mask. Please make sure that the resolution of mask is same as images To test the model:
+```bash
+python test.py \
   --checkpoints [path to checkpoints] \
   --input [path to input directory or file] \
   --mask [path to masks directory or mask file] \
@@ -82,19 +87,6 @@ python test.py \
   --output ./checkpoints/results
 ```
 This script will inpaint all images in `./examples/places2/images` using their corresponding masks in `./examples/places2/mask` directory and saves the results in `./checkpoints/results` directory. By default `test.py` script is run on stage 3 (`--model=3`).
-
-### 3) Evaluating
-To evaluate the model, you need to first run the model in [test mode](#testing) against your validation set and save the results on disk. We provide a utility [`./scripts/metrics.py`](scripts/metrics.py) to evaluate the model using PSNR, SSIM and Mean Absolute Error:
-
-```bash
-python ./scripts/metrics.py --data-path [path to validation set] --output-path [path to model output]
-```
-
-To measure the Fréchet Inception Distance (FID score) run [`./scripts/fid_score.py`](scripts/fid_score.py). We utilize the PyTorch implementation of FID [from here](https://github.com/mseitzer/pytorch-fid) which uses the pretrained weights from PyTorch's Inception model.
-
-```bash
-python ./scripts/fid_score.py --path [path to validation, path to model output] --gpu [GPU id to use]
-```
 
 
 ### Model Configuration
@@ -112,7 +104,7 @@ Lots of logic code and readme file comes from [Edge-Connect](https://github.com/
 
 
 ## Citation
-If you use this code for your research, please cite our paper <a href="https://">g</a>:
+If you use this code for your research, please cite our paper <a href="https://">None</a>:
 
 ```
 
@@ -122,7 +114,7 @@ If you use this code for your research, please cite our paper <a href="https://"
 
 Option          | Description
 ----------------| -----------
-MODE            | 1: train, 2: test, 3: eval
+MODE            | 1: train, 2: test, 3: eval             #
 MASK            | 1: random block, 2: half, 3: external, 4: external + random block, 5: external + random block + half
 SEED            | random number generator seed
 GPU             | list of gpu ids, comma separated list e.g. [0,1]

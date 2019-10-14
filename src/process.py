@@ -244,9 +244,10 @@ class CLFNet():
                 outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                 output = self.postprocess(outputs_merged)[0]
-                path = os.path.join(inpainted_dir, name)
-                # print(index, name)
-                imsave(output, path)
+                if model == 2:
+                    path = os.path.join(inpainted_dir, name)
+                    # print(index, name)
+                    imsave(output, path)
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
