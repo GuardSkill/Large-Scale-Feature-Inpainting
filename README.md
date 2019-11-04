@@ -30,12 +30,17 @@ pip install -r requirements.txt
 ### 1) Images
 We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) datasets. To train a model on the full dataset, download datasets from official websites. 
 
-After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists for images and masks. For example, to generate the training set file list on Places2 dataset run:
+After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists for images or masks. To generate the training set file lists on Places2 dataset run:
 ```bash
 mkdir datasets
-python ./scripts/flist.py --path path_to_places2_train_set --output ./datasets/places2_train.flist
-python ./scripts/flist.py --path path_to_places2_validation_set --output ./datasets/places2_val.flist
-python ./scripts/flist.py --path path_to_places2_test_set --output ./datasets/masks_test.flist
+python ./scripts/flist.py --path [path_to_places2_train_set] --output ./datasets/places2_train.flist
+python ./scripts/flist.py --path [path_to_places2_validation_set] --output ./datasets/places2_val.flist
+python ./scripts/flist.py --path [path_to_places2_test_set] --output ./datasets/mask_test.flist
+```
+
+We alse provide the function for generate the file lists of CelebA by using the official partition file. To generate the train,val,test dataset file lists on celeba dataset run:
+```bash
+--path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file] 
 ```
 
 ### 2) Irregular Masks
@@ -50,6 +55,7 @@ We additionally provide the [code](https://github.com/GuardSkill/AITools/blob/ma
 Download the pre-trained models using the following links and copy them under `./checkpoints` directory.
 
 Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng)
+
 Pretrained on CelebA:  [mega](https://drive.google.com/file/d/1opkFszQr9lSKfaoop-RYbu5LRNrZim27/view?usp=sharing) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing)
 
 ### 1) Training
@@ -69,7 +75,7 @@ python test.py \
 --path ./checkpoints/Celeba
 ```
 
-You can test the model for some specific images and masks, you need to provide an input image and a binary mask. Please make sure that the resolution of mask is same as images To test the model:
+You can test the model for some specific images and masks, you need to provide an input images and a binary masks. Please make sure that the resolution of mask is same as images To test the model:
 ```bash
 python test.py \
   --checkpoints [path to checkpoints] \
@@ -84,9 +90,9 @@ python test.py \
   --checkpoints ./checkpoints/places2 
   --input ./examples/places2/images 
   --mask ./examples/places2/masks
-  --output ./checkpoints/results
+  --output ./examples/places2/results
 ```
-This script will inpaint all images in `./examples/places2/images` using their corresponding masks in `./examples/places2/mask` directory and saves the results in `./checkpoints/results` directory. By default `test.py` script is run on stage 3 (`--model=3`).
+This script will inpaint all images in `./examples/places2/images` using their corresponding masks in `./examples/places2/mask` directory and saves the results in `./checkpoints/places2/results` directory.
 
 
 ### Model Configuration

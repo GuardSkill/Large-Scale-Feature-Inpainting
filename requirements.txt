@@ -5,4 +5,5 @@ matplotlib ~= 2.2.2
 pillow ~= 5.0.0
 opencv-python ~= 3.4.0
 scikit-image ~= 0.14.0
-pyaml
+pyaml ~= 19.4.1
+pandas ~= 0.25.2

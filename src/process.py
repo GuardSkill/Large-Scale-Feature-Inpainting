@@ -201,7 +201,6 @@ class CLFNet():
         raw_dir = os.path.join(self.results_path, "raw")
         create_dir(raw_dir)
 
-        model = self.config.MODEL  # Discard
         create_dir(self.results_path)
         sample_interval = 1
         batch_size = 1
@@ -222,7 +221,7 @@ class CLFNet():
                 images, images_gray, masks = self.cuda(*items)
 
                 # Save damaged image
-                if model == 2:
+                if self.config.MODE == 2:
                     path = os.path.join(damaged_dir, name)
                     damaged_img = self.postprocess(images * masks + (1 - masks))[0]
                     imsave(damaged_img, path)
@@ -244,7 +243,7 @@ class CLFNet():
                 outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                 output = self.postprocess(outputs_merged)[0]
-                if model == 2:
+                if self.config.MODE == 2:
                     path = os.path.join(inpainted_dir, name)
                     # print(index, name)
                     imsave(output, path)
