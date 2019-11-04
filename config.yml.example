@@ -9,9 +9,9 @@ TRAIN_FLIST: ./datasets/places2_train.flist
 VAL_FLIST: ./datasets/places2_test.flist
 TEST_FLIST: ./datasets/places2_test.flist
 
-TRAIN_MASK_FLIST: ./datasets/masks_train.flist
-VAL_MASK_FLIST: ./datasets/masks_train.flist
-TEST_MASK_FLIST: ./datasets/masks_train.flist
+TRAIN_MASK_FLIST: ./datasets/mask_train.flist
+VAL_MASK_FLIST: ./datasets/mask_train.flist
+TEST_MASK_FLIST: ./datasets/mask_train.flist
 
 BLOCKS: 4                     # set the res block in each stage
 LR: 1e-4                      # learning rate
