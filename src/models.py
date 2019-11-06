@@ -5,7 +5,7 @@ import torch.optim as optim
 
 from ablation.network_fusion import RFFNet_fusion
 from .networks import Discriminator, UnetGenerator, UnetGeneratorSame, RFFNet
-from .loss import AdversarialLoss, PerceptualLoss, StyleLoss
+from .loss import AdversarialLoss, PerceptualLoss, StyleLoss, GradientLoss
 
 
 class BaseModel(nn.Module):
@@ -61,14 +61,15 @@ class InpaintingModel(BaseModel):
     def __init__(self, config):
         super(InpaintingModel, self).__init__('InpaintingModel', config)
 
-        # generator input: [rgb(3) + edge(1)+mask(1)]
-        # discriminator input: [rgb(3)]
-        # generator = RFFNet(3,2)
-        generator = RFFNet(3, config.BLOCKS)
+        # generator input: [rgb(3)]
+        in_channel=3
+        generator = RFFNet(in_channel, config.BLOCKS)
         # generator=UnetGeneratorSame()       Unet-lile generator
         print("This Model Total params:", (sum([param.nelement() for param in generator.parameters()])))
         # summary(generator, (3, 256, 256), 6,device='cpu')
         # print(generator)
+
+        # discriminator input: [rgb(3)]
         discriminator = Discriminator(in_channels=3, use_sigmoid=config.GAN_LOSS != 'hinge')
         if len(config.GPU) > 1:
             generator = nn.DataParallel(generator, config.GPU)
@@ -78,14 +79,15 @@ class InpaintingModel(BaseModel):
         perceptual_loss = PerceptualLoss()
         style_loss = StyleLoss()
         adversarial_loss = AdversarialLoss(type=config.GAN_LOSS)
+        gradient_loss = GradientLoss(independent=True, distance='L2')
 
         self.add_module('generator', generator)
         self.add_module('discriminator', discriminator)
-
         self.add_module('l1_loss', l1_loss)
         self.add_module('perceptual_loss', perceptual_loss)
         self.add_module('style_loss', style_loss)
         self.add_module('adversarial_loss', adversarial_loss)
+        self.add_module('gradient_loss', gradient_loss)
 
         self.gen_optimizer = optim.Adam(
             params=generator.parameters(),
@@ -124,33 +126,49 @@ class InpaintingModel(BaseModel):
         dis_loss += (dis_real_loss + dis_fake_loss) / 2
 
         # generator adversarial loss
-        gen_input_fake = outputs
-        # gen_input_fake = torch.cat((outputs, masks), dim=1)
-        gen_fake, gen_fake_feat = self.discriminator(gen_input_fake)  # in: [rgb(3)]
-        gen_gan_loss = self.adversarial_loss(gen_fake, True, False) * self.config.INPAINT_ADV_LOSS_WEIGHT
-        gen_loss += gen_gan_loss
+        gen_gan_loss=torch.FloatTensor([0])
+        if self.config.INPAINT_ADV_LOSS_WEIGHT > 0:
+            gen_input_fake = outputs
+            # gen_input_fake = torch.cat((outputs, masks), dim=1)
+            gen_fake, gen_fake_feat = self.discriminator(gen_input_fake)  # in: [rgb(3)]
+            gen_gan_loss = self.adversarial_loss(gen_fake, True, False) * self.config.INPAINT_ADV_LOSS_WEIGHT
+            gen_loss += gen_gan_loss
 
         # generator feature matching loss
-        gen_fm_loss = 0
-        for i in range(len(dis_real_feat)):
-            gen_fm_loss += self.l1_loss(gen_fake_feat[i], dis_real_feat[i].detach())
-        gen_fm_loss = gen_fm_loss * self.config.FM_LOSS_WEIGHT
-        gen_loss += gen_fm_loss
+        gen_fm_loss = torch.FloatTensor([0])
+        if self.config.FM_LOSS_WEIGHT > 0:
+            gen_fm_loss = 0
+            for i in range(len(dis_real_feat)):
+                gen_fm_loss += self.l1_loss(gen_fake_feat[i], dis_real_feat[i].detach())
+            gen_fm_loss = gen_fm_loss * self.config.FM_LOSS_WEIGHT
+            gen_loss += gen_fm_loss
 
         # generator l1 loss
-        gen_l1_loss = self.l1_loss(outputs, images) * self.config.L1_LOSS_WEIGHT / torch.mean(1 - masks)
-        gen_loss += gen_l1_loss
+        gen_l1_loss = torch.FloatTensor([0])
+        if self.config.L1_LOSS_WEIGHT > 0:
+            gen_l1_loss = self.l1_loss(outputs, images) * self.config.L1_LOSS_WEIGHT / torch.mean(1 - masks)
+            gen_loss += gen_l1_loss
 
         # # generator perceptual loss
-        gen_content_loss = self.perceptual_loss(outputs, images)
-        gen_content_loss = gen_content_loss * self.config.CONTENT_LOSS_WEIGHT
-        gen_loss += gen_content_loss
+        gen_content_loss=torch.FloatTensor([0])
+        if self.config.CONTENT_LOSS_WEIGHT>0:
+            gen_content_loss = self.perceptual_loss(outputs, images)
+            gen_content_loss = gen_content_loss * self.config.CONTENT_LOSS_WEIGHT
+            gen_loss += gen_content_loss
 
         # # generator style loss
-        gen_style_loss = self.style_loss(outputs, images)
-        gen_style_loss = gen_style_loss * self.config.STYLE_LOSS_WEIGHT
-        gen_loss += gen_style_loss
+        gen_style_loss=torch.FloatTensor([0])
+        if self.config.STYLE_LOSS_WEIGHT > 0:
+            gen_style_loss = self.style_loss(outputs, images)
+            gen_style_loss = gen_style_loss * self.config.STYLE_LOSS_WEIGHT
+            gen_loss += gen_style_loss
 
+        # gradient loss
+        gen_gradient_loss = torch.FloatTensor([0])
+        if self.config.GRADIENT_LOSS_WEIGHT > 0:
+            gen_gradient_loss=self.gradient_loss(outputs,images)
+            gen_gradient_loss= gen_gradient_loss * self.config.GRADIENT_LOSS_WEIGHT
+            gen_loss += gen_gradient_loss
         # create logs
         logs = {
             "l_d2": dis_loss.item(),
@@ -158,7 +176,8 @@ class InpaintingModel(BaseModel):
             "l_l1": gen_l1_loss.item(),
             "l_fm": gen_fm_loss.item(),
             "l_per": gen_content_loss.item(),
-            "l_sty": gen_style_loss.item()
+            "l_sty": gen_style_loss.item(),
+            'l_grad': gen_gradient_loss.item()
         }
 
         if not self.training:

@@ -91,7 +91,7 @@ def load_config(mode=None):
 
     # load config file
     config = Config(config_path)
-
+    config.print()
     # train mode
     if mode == 1:
         config.MODE = 1

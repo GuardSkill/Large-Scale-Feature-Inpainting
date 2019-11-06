@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import numpy as np
 
 
 class AdversarialLoss(nn.Module):
@@ -227,3 +228,38 @@ class VGG19(torch.nn.Module):
             'relu5_4': relu5_4,
         }
         return out
+
+
+class GradientLoss(nn.Module):
+    r"""
+    Image Gradient Loss
+    independent: Whether to calculate the loss in x,y direction independently.
+    """
+
+    def __init__(self, independent=True, distance='L2'):
+        super(GradientLoss, self).__init__()
+        self.independent = independent
+        if distance == 'L2':
+            self.criterion = torch.nn.MSELoss()
+        else:
+            self.criterion = torch.nn.L1Loss()
+        # kernel: (out_channels.inchannels,H,W)
+        x_kernel = torch.FloatTensor([[1, 0, -1], [2, 0, -2], [1, 0, -1]]).view((1, 1, 3, 3))
+        y_kernel = torch.FloatTensor([[1, 2, 1], [0, 0, 0], [-1, -2, -1]]).view((1, 1, 3, 3))
+        self.kernel=torch. torch.cat([x_kernel,y_kernel]).expand(2,3,3,3).cuda()
+        # convx = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        # convx.weight = nn.Parameter(torch.from_numpy(x_kernel).float().unsqueeze(0).unsqueeze(0))
+        # convy = nn.Conv2d(1, 1, kernel_size=3, stride=1, padding=1, bias=False)
+        # convy.weight = nn.Parameter(torch.from_numpy(b).float().unsqueeze(0).unsqueeze(0))
+
+    def __call__(self, x, y):
+        # Compute gradient
+        G_x = nn.functional.conv2d(x, self.kernel, bias=None, stride=1, padding=0, dilation=1, groups=1)
+        G_y = nn.functional.conv2d(y, self.kernel, bias=None, stride=1, padding=0, dilation=1, groups=1)
+        if self.independent:
+            GLoss = self.criterion(G_x, G_y)
+        else:
+            GX = torch.sqrt(torch.pow(G_x[:,:,:,0], 2) + torch.pow(G_x[:,:,:,1], 2))
+            GY = torch.sqrt(torch.pow(G_y[:,:,:,0], 2) + torch.pow(G_y[:,:,:,1], 2))
+            GLoss = self.criterion(GX, GY)
+        return GLoss

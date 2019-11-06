@@ -55,11 +55,11 @@ DEFAULT_CONFIG = {
     'LOADWITHEPOCH':0,   # if load epoch when loading model
 
     'L1_LOSS_WEIGHT': 1,  # l1 loss weight
-    'FM_LOSS_WEIGHT': 10,  # feature-matching loss weight
-    'STYLE_LOSS_WEIGHT': 1,  # style loss weight
-    'CONTENT_LOSS_WEIGHT': 1,  # perceptual loss weight
-    'INPAINT_ADV_LOSS_WEIGHT': 0.01,  # adversarial loss weight
-
+    'FM_LOSS_WEIGHT': 0,  # feature-matching loss weight 10
+    'STYLE_LOSS_WEIGHT': 0,  # style loss weight 1
+    'CONTENT_LOSS_WEIGHT': 0,  # perceptual loss weight 1
+    'INPAINT_ADV_LOSS_WEIGHT': 1,  # adversarial loss weight 0.01
+    'GRADIENT_LOSS_WEIGHT':1, # gradient loss weight   0
     'GAN_LOSS': 'nsgan',  # nsgan | lsgan | hinge
     'GAN_POOL_SIZE': 0,  # fake images pool size
 
