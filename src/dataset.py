@@ -50,7 +50,7 @@ class Dataset(torch.utils.data.Dataset):
         size = self.input_size
 
         # load image
-        img = imread(self.data[index])
+        img = imread(self.data[index])  # 256 *256*3
 
         # gray to rgb
         if len(img.shape) < 3:

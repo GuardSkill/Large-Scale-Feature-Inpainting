@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+from scipy import ndimage
 from torch.utils.data import DataLoader
 
 from .dataset import Dataset
@@ -25,7 +26,7 @@ class CLFNet():
 
         val_sample = int(float((self.config.EVAL_INTERVAL)))
         # test mode
-        if self.config.MODE == 2:
+        if self.config.MODE == 2 or self.config.MODE == 4:
             self.test_dataset = Dataset(config, config.TEST_FLIST, config.TEST_MASK_FLIST,
                                         augment=False, training=False)
         else:
@@ -250,7 +251,109 @@ class CLFNet():
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
-                l1=torch.nn.L1Loss()(images,outputs_merged)
+                l1 = torch.nn.L1Loss()(images, outputs_merged)
+                one_ssim = self.ssim(images, outputs_merged)
+                logs["psnr"] = psnr.item()
+                # logs["mae"] = mae.item()
+                logs["L1"] = l1.item()
+                logs["ssim"] = one_ssim.item()
+                logs["step"] = index
+                progbar.add(1, values=logs.items())
+
+                if self.debug:
+                    pass
+
+        print('\nEnd test....')
+
+    def progressive_test(self):
+        self.inpaint_model.eval()
+        damaged_dir = os.path.join(self.results_path, "damaged")
+        create_dir(damaged_dir)
+        mask_dir = os.path.join(self.results_path, "mask")
+        create_dir(mask_dir)
+        inpainted_dir = os.path.join(self.results_path, "inpainted")
+        create_dir(inpainted_dir)
+        raw_dir = os.path.join(self.results_path, "raw")
+        create_dir(raw_dir)
+
+        create_dir(self.results_path)
+        sample_interval = 1
+        batch_size = 1
+        test_loader = DataLoader(
+            dataset=self.test_dataset,
+            batch_size=batch_size,
+            num_workers=1,
+            shuffle=False
+        )
+
+        total = int(len(self.test_dataset))
+        progbar = Progbar(int(total / batch_size / sample_interval), width=30, stateful_metrics=['step'])
+
+        index = 0
+        with torch.no_grad():
+            for items in test_loader:
+                index += 1
+                if index > total / batch_size / sample_interval:
+                    break;
+                logs = {}
+                name = self.test_dataset.load_name(index)
+                images, images_gray, masks = self.cuda(*items)
+
+                # Save damaged image
+                if self.config.MODE == 4:
+                    path = os.path.join(damaged_dir, name)
+                    damaged_img = self.postprocess(images * masks + (1 - masks))[0]
+                    imsave(damaged_img, path)
+                    # Save masks
+                    path = os.path.join(mask_dir, name)
+                    imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
+                    # Save Ground Truth
+                    path = os.path.join(raw_dir, name)
+                    img = self.postprocess(images)[0]
+                    imsave(img, path)
+                    # print(index, name)
+
+                # run model
+                outputs = self.inpaint_model(images, masks)
+                outputs_merged = (outputs * (1 - masks)) + (images * masks)
+
+                # # Test again:
+                # masks=masks.cpu().numpy().astype(np.uint8)   # [0-255]
+                # # masks = (masks > 128).astype(np.uint8)                # [0-1]
+                # struct = ndimage.generate_binary_structure(4, 5)
+                # np_masks=ndimage.binary_dilation(masks,structure=struct).astype(masks.dtype)  # [0-1]
+                # masks=torch.from_numpy(np_masks)
+                np_masks=masks.cpu().numpy()
+                NoHoleNum = np.count_nonzero(np_masks)
+                ratio = (np_masks.size - NoHoleNum) / np_masks.size
+                i = 1
+                while ratio > 0.2 and i<=4:
+                    # Save masks again
+                    # Erosion
+                    masks = masks.cpu().numpy().astype(np.uint8)  # [0-255]
+                    np_masks = ndimage.grey_dilation(masks, size=(1, 1, 9, 9))
+                    masks = torch.from_numpy(np_masks).float().to(self.config.DEVICE)
+
+                    if self.config.MODE == 4:
+                        path = os.path.join(mask_dir, name)
+                        imsave(self.postprocess(masks), os.path.splitext(path)[0] + '_%d.png' % i)
+                    outputs = self.inpaint_model(outputs_merged, masks)
+                    outputs_merged = (outputs * (1 - masks)) + (images * masks)
+                    i += 1
+
+                    # count no hole number and ratio
+                    NoHoleNum = np.count_nonzero(np_masks)
+                    ratio = (np_masks.size - NoHoleNum) / np_masks.size
+
+                if self.config.MODE == 4:
+                    path = os.path.join(inpainted_dir, name)
+                    # print(index, name)
+                    output = self.postprocess(outputs_merged)[0]
+                    imsave(output, path)
+                psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
+                l1 = torch.nn.L1Loss()(images, outputs_merged)
                 one_ssim = self.ssim(images, outputs_merged)
                 logs["psnr"] = psnr.item()
                 # logs["mae"] = mae.item()
@@ -314,6 +417,13 @@ class CLFNet():
         img = img * 255.0
         img = img.permute(0, 2, 3, 1)
         return img.int()
+
+    def preprocess(self, img):
+        # [0, 255] => [0, 1]
+        img = np.expand_dims(img, axis=0)
+        img = np.expand_dims(img, axis=0)
+        # img = img.astype(float) / 255.0
+        return img
 
     def color_the_edge(self, img, edges, masks):
         img = img.expand(-1, 3, -1, -1)

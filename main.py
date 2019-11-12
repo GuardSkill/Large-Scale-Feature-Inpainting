@@ -57,6 +57,10 @@ def main(mode=None):
         model.test()
 
     # eval mode
+    elif config.MODE == 4:
+        print('\nstart progressive testing...\n')
+        model.progressive_test()
+
     else:
         print('\nstart eval...\n')
         model.eval(0)

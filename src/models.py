@@ -62,7 +62,7 @@ class InpaintingModel(BaseModel):
         super(InpaintingModel, self).__init__('InpaintingModel', config)
 
         # generator input: [rgb(3)]
-        in_channel=3
+        in_channel = 3
         generator = RFFNet(in_channel, config.BLOCKS)
         # generator=UnetGeneratorSame()       Unet-lile generator
         print("This Model Total params:", (sum([param.nelement() for param in generator.parameters()])))
@@ -71,9 +71,10 @@ class InpaintingModel(BaseModel):
 
         # discriminator input: [rgb(3)]
         discriminator = Discriminator(in_channels=3, use_sigmoid=config.GAN_LOSS != 'hinge')
+        gpus=config.GPU
         if len(config.GPU) > 1:
-            generator = nn.DataParallel(generator, config.GPU)
-            discriminator = nn.DataParallel(discriminator, config.GPU)
+            generator = nn.DataParallel(generator,gpus)
+            discriminator = nn.DataParallel(discriminator,gpus)
 
         l1_loss = nn.L1Loss()
         perceptual_loss = PerceptualLoss()
@@ -126,7 +127,7 @@ class InpaintingModel(BaseModel):
         dis_loss += (dis_real_loss + dis_fake_loss) / 2
 
         # generator adversarial loss
-        gen_gan_loss=torch.FloatTensor([0])
+        gen_gan_loss = torch.FloatTensor([0])
         if self.config.INPAINT_ADV_LOSS_WEIGHT > 0:
             gen_input_fake = outputs
             # gen_input_fake = torch.cat((outputs, masks), dim=1)
@@ -150,14 +151,14 @@ class InpaintingModel(BaseModel):
             gen_loss += gen_l1_loss
 
         # # generator perceptual loss
-        gen_content_loss=torch.FloatTensor([0])
-        if self.config.CONTENT_LOSS_WEIGHT>0:
+        gen_content_loss = torch.FloatTensor([0])
+        if self.config.CONTENT_LOSS_WEIGHT > 0:
             gen_content_loss = self.perceptual_loss(outputs, images)
             gen_content_loss = gen_content_loss * self.config.CONTENT_LOSS_WEIGHT
             gen_loss += gen_content_loss
 
         # # generator style loss
-        gen_style_loss=torch.FloatTensor([0])
+        gen_style_loss = torch.FloatTensor([0])
         if self.config.STYLE_LOSS_WEIGHT > 0:
             gen_style_loss = self.style_loss(outputs, images)
             gen_style_loss = gen_style_loss * self.config.STYLE_LOSS_WEIGHT
@@ -166,8 +167,8 @@ class InpaintingModel(BaseModel):
         # gradient loss
         gen_gradient_loss = torch.FloatTensor([0])
         if self.config.GRADIENT_LOSS_WEIGHT > 0:
-            gen_gradient_loss=self.gradient_loss(outputs,images)
-            gen_gradient_loss= gen_gradient_loss * self.config.GRADIENT_LOSS_WEIGHT
+            gen_gradient_loss = self.gradient_loss(outputs, images)
+            gen_gradient_loss = gen_gradient_loss * self.config.GRADIENT_LOSS_WEIGHT
             gen_loss += gen_gradient_loss
         # create logs
         logs = {
@@ -201,3 +202,4 @@ class InpaintingModel(BaseModel):
 
         gen_loss.backward()
         self.gen_optimizer.step()
+
