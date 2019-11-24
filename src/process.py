@@ -19,6 +19,7 @@ class CLFNet():
         self.debug = False
         self.model_name = model_name
         self.inpaint_model = InpaintingModel(config).to(config.DEVICE)
+
         # summary(InpaintingModel, (3, 256, 256), 6)
         # print(InpaintingModel)
         self.psnr = PSNR(255.0).to(config.DEVICE)

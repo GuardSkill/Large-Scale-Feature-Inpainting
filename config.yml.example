@@ -30,7 +30,7 @@ FM_LOSS_WEIGHT: 0             # feature-matching loss weight 10
 STYLE_LOSS_WEIGHT: 0          # style loss weight  250
 CONTENT_LOSS_WEIGHT: 0        # perceptual loss weight  0.1
 INPAINT_ADV_LOSS_WEIGHT: 1    # adversarial loss weight   0.1
-GRADIENT_LOSS_WEIGHT: 1       # gradient loss weight   0
+# GRADIENT_LOSS_WEIGHT: 1       # gradient loss weight   0
 GAN_LOSS: nsgan               # nsgan | lsgan | hinge
 GAN_POOL_SIZE: 0              # fake images pool size
 

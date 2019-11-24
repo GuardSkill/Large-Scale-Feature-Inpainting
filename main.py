@@ -39,7 +39,7 @@ def main(mode=None):
     random.seed(config.SEED)
 
     # tune parameters
-    # randomT0une(config)
+    # randomTune(config)
 
     # build the model and initialize
     model = CLFNet(config)

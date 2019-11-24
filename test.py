@@ -1,3 +1,3 @@
 from main import main
 if __name__ == "__main__":
-    main(mode=2)
+    main()

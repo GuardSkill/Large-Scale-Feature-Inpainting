@@ -71,16 +71,16 @@ class InpaintingModel(BaseModel):
 
         # discriminator input: [rgb(3)]
         discriminator = Discriminator(in_channels=3, use_sigmoid=config.GAN_LOSS != 'hinge')
-        gpus=config.GPU
-        if len(config.GPU) > 1:
-            generator = nn.DataParallel(generator,gpus)
-            discriminator = nn.DataParallel(discriminator,gpus)
-
         l1_loss = nn.L1Loss()
         perceptual_loss = PerceptualLoss()
         style_loss = StyleLoss()
         adversarial_loss = AdversarialLoss(type=config.GAN_LOSS)
-        gradient_loss = GradientLoss(independent=True, distance='L2')
+        # gradient_loss = GradientLoss(independent=True, distance='L2')
+        gpus = config.GPU
+        gpus_list_0_start = list(range(len(gpus)))  # beause we set os.environ to change the visible GPUS in main,py
+        if len(config.GPU) > 1:
+            generator = nn.DataParallel(generator, gpus_list_0_start)
+            discriminator = nn.DataParallel(discriminator, gpus_list_0_start)
 
         self.add_module('generator', generator)
         self.add_module('discriminator', discriminator)
@@ -88,8 +88,7 @@ class InpaintingModel(BaseModel):
         self.add_module('perceptual_loss', perceptual_loss)
         self.add_module('style_loss', style_loss)
         self.add_module('adversarial_loss', adversarial_loss)
-        self.add_module('gradient_loss', gradient_loss)
-
+        # self.add_module('gradient_loss', gradient_loss)
         self.gen_optimizer = optim.Adam(
             params=generator.parameters(),
             lr=float(config.LR),
@@ -165,11 +164,11 @@ class InpaintingModel(BaseModel):
             gen_loss += gen_style_loss
 
         # gradient loss
-        gen_gradient_loss = torch.FloatTensor([0])
-        if self.config.GRADIENT_LOSS_WEIGHT > 0:
-            gen_gradient_loss = self.gradient_loss(outputs, images)
-            gen_gradient_loss = gen_gradient_loss * self.config.GRADIENT_LOSS_WEIGHT
-            gen_loss += gen_gradient_loss
+        # gen_gradient_loss = torch.FloatTensor([0])
+        # if self.config.GRADIENT_LOSS_WEIGHT > 0:
+        #     gen_gradient_loss = self.gradient_loss(outputs, images)
+        #     gen_gradient_loss = gen_gradient_loss * self.config.GRADIENT_LOSS_WEIGHT
+        #     gen_loss += gen_gradient_loss
         # create logs
         logs = {
             "l_d2": dis_loss.item(),
@@ -178,7 +177,7 @@ class InpaintingModel(BaseModel):
             "l_fm": gen_fm_loss.item(),
             "l_per": gen_content_loss.item(),
             "l_sty": gen_style_loss.item(),
-            'l_grad': gen_gradient_loss.item()
+            # 'l_grad': gen_gradient_loss.item()
         }
 
         if not self.training:
