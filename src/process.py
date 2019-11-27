@@ -3,13 +3,13 @@ import numpy as np
 import torch
 from scipy import ndimage
 from torch.utils.data import DataLoader
-
+from src.networks import TwoBranchModule
 from .dataset import Dataset
 from .models import InpaintingModel
 from .utils import Progbar, create_dir, stitch_images, imsave
 from .metrics import PSNR, SSIM
 from libs.logger import Logger
-
+import matplotlib.pyplot as plt
 
 # cross_level Features Net
 class CLFNet():
@@ -27,7 +27,7 @@ class CLFNet():
 
         val_sample = int(float((self.config.EVAL_INTERVAL)))
         # test mode
-        if self.config.MODE == 2 or self.config.MODE == 4:
+        if self.config.MODE == 2 or self.config.MODE == 4 or self.config.MODE == 5:
             self.test_dataset = Dataset(config, config.TEST_FLIST, config.TEST_MASK_FLIST,
                                         augment=False, training=False)
         else:
@@ -204,13 +204,13 @@ class CLFNet():
         create_dir(raw_dir)
 
         create_dir(self.results_path)
-        sample_interval = 1
+        sample_interval = 328.5
         batch_size = 1
         test_loader = DataLoader(
             dataset=self.test_dataset,
             batch_size=batch_size,
             num_workers=1,
-            shuffle=False
+            shuffle=True
         )
 
         total = int(len(self.test_dataset))
@@ -324,11 +324,11 @@ class CLFNet():
                 # struct = ndimage.generate_binary_structure(4, 5)
                 # np_masks=ndimage.binary_dilation(masks,structure=struct).astype(masks.dtype)  # [0-1]
                 # masks=torch.from_numpy(np_masks)
-                np_masks=masks.cpu().numpy()
+                np_masks = masks.cpu().numpy()
                 NoHoleNum = np.count_nonzero(np_masks)
                 ratio = (np_masks.size - NoHoleNum) / np_masks.size
                 i = 1
-                while ratio > 0.2 and i<=4:
+                while ratio > 0.2 and i <= 4:
                     # Save masks again
                     # Erosion
                     masks = masks.cpu().numpy().astype(np.uint8)  # [0-255]
@@ -366,6 +366,105 @@ class CLFNet():
                 if self.debug:
                     pass
 
+        print('\nEnd test....')
+
+    def feature_visualize(self,module, input):
+        xs=input[0]
+        index=0
+        for x in xs:
+            x=x[0]   # remove batch dimension
+            min_num = np.minimum(16, x.size()[0])
+            for i in range(min_num):
+                plt.subplot(4, 4, i + 1)
+                plt.axis('off')
+                plt.imshow(x[i].cpu())
+
+            name='stage_'+str(module.stage)+'branch_'+str(index)
+            for i in x.shape:
+                name=name+'_'+str(i)
+            plt.savefig(name+'.png',bbox_inches='tight')
+            plt.show()
+            index+=1
+
+
+    def visualization_test(self):
+        self.inpaint_model.eval()
+        for  m in self.inpaint_model.generator.modules():
+            if isinstance(m,TwoBranchModule):
+                m.register_forward_pre_hook(self.feature_visualize)
+            # if isinstance(m, torch.nn.Conv2d):
+            #     m.register_forward_pre_hook(self.feature_visualize)
+
+        damaged_dir = os.path.join(self.results_path, "damaged")
+        create_dir(damaged_dir)
+        mask_dir = os.path.join(self.results_path, "mask")
+        create_dir(mask_dir)
+        inpainted_dir = os.path.join(self.results_path, "inpainted")
+        create_dir(inpainted_dir)
+        raw_dir = os.path.join(self.results_path, "raw")
+        create_dir(raw_dir)
+
+        create_dir(self.results_path)
+        sample_interval = 1
+        batch_size = 1
+        test_loader = DataLoader(
+            dataset=self.test_dataset,
+            batch_size=batch_size,
+            num_workers=1,
+            shuffle=False
+        )
+
+        total = int(len(self.test_dataset))
+        progbar = Progbar(int(total / batch_size / sample_interval), width=30, stateful_metrics=['step'])
+
+        index = 0
+        with torch.no_grad():
+            for items in test_loader:
+                name = self.test_dataset.load_name(index)
+                images, images_gray, masks = self.cuda(*items)
+
+                # Save damaged image
+                if self.config.MODE == 2:
+                    path = os.path.join(damaged_dir, name)
+                    damaged_img = self.postprocess(images * masks + (1 - masks))[0]
+                    imsave(damaged_img, path)
+                    # Save masks
+                    path = os.path.join(mask_dir, name)
+                    imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
+                    # Save Ground Truth
+                    path = os.path.join(raw_dir, name)
+                    img = self.postprocess(images)[0]
+                    imsave(img, path)
+                    # print(index, name)
+
+                index += 1
+                if index > total / batch_size / sample_interval:
+                    break;
+                logs = {}
+                # run model
+                outputs = self.inpaint_model(images, masks)
+                outputs_merged = (outputs * (1 - masks)) + (images * masks)
+
+                output = self.postprocess(outputs_merged)[0]
+                if self.config.MODE == 2:
+                    path = os.path.join(inpainted_dir, name)
+                    # print(index, name)
+                    imsave(output, path)
+                psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
+                l1 = torch.nn.L1Loss()(images, outputs_merged)
+                one_ssim = self.ssim(images, outputs_merged)
+                logs["psnr"] = psnr.item()
+                # logs["mae"] = mae.item()
+                logs["L1"] = l1.item()
+                logs["ssim"] = one_ssim.item()
+                logs["step"] = index
+                progbar.add(1, values=logs.items())
+
+                if self.debug:
+                    pass
+                break
         print('\nEnd test....')
 
     def sample(self, it=None):

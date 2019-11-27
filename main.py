@@ -56,11 +56,16 @@ def main(mode=None):
         print('\nstart testing...\n')
         model.test()
 
-    # eval mode
+    # progressive test mode
     elif config.MODE == 4:
         print('\nstart progressive testing...\n')
         model.progressive_test()
 
+    # visualization
+    elif config.MODE == 5:
+        print('\nstart progressive testing...\n')
+        model.visualization_test()
+    # eval mode
     else:
         print('\nstart eval...\n')
         model.eval(0)
