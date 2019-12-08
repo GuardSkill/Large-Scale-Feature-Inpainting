@@ -251,7 +251,7 @@ class CLFNet():
                     imsave(output, path)
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
-                # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
+                # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float() = = L1 distance
                 l1 = torch.nn.L1Loss()(images, outputs_merged)
                 one_ssim = self.ssim(images, outputs_merged)
                 logs["psnr"] = psnr.item()

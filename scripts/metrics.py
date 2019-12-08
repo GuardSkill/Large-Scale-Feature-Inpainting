@@ -22,7 +22,9 @@ def parse_args():
 def compare_mae(img_true, img_test):
     img_true = img_true.astype(np.float32)
     img_test = img_test.astype(np.float32)
-    return np.sum(np.abs(img_true - img_test)) / np.sum(img_true + img_test)
+    # return np.sum(np.abs(img_true - img_test)) / np.sum(img_true + img_test)
+    return np.sum(np.abs(img_true - img_test)) / img_true.size
+
 
 
 args = parse_args()
@@ -59,7 +61,8 @@ for fn in sorted(files):
         plt.show()
 
     psnr.append(compare_psnr(img_gt, img_pred, data_range=1))
-    ssim.append(compare_ssim(img_gt, img_pred, data_range=1, win_size=51))
+    # ssim.append(compare_ssim(img_gt, img_pred, data_range=1, win_size=51))
+    ssim.append(compare_ssim(img_gt, img_pred, data_range=1, win_size=11))
     mae.append(compare_mae(img_gt, img_pred))
     if np.mod(index, 100) == 0:
         print(

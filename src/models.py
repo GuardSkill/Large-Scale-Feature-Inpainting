@@ -81,7 +81,8 @@ class InpaintingModel(BaseModel):
         if len(config.GPU) > 1:
             generator = nn.DataParallel(generator, gpus_list_0_start)
             discriminator = nn.DataParallel(discriminator, gpus_list_0_start)
-
+            # generator =nn.DistributedDataParallel(generator, gpus_list_0_start)
+            # discriminator = nn.DistributedDataParallel(discriminator, gpus_list_0_start)
         self.add_module('generator', generator)
         self.add_module('discriminator', discriminator)
         self.add_module('l1_loss', l1_loss)
