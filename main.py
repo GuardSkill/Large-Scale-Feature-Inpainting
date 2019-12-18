@@ -84,7 +84,7 @@ def load_config(mode=None):
     parser.add_argument('--output', type=str, default='./output', help='path to the output directory')
 
     # test mode
-    if mode == 2:
+    if mode >= 2:
         parser.add_argument('--input', type=str, help='path to the input images directory or an input image')
         parser.add_argument('--mask', type=str, help='path to the masks directory or a mask file')
 
@@ -107,7 +107,7 @@ def load_config(mode=None):
 
     # test mode
     elif mode == 2:
-        config.MODE = 2
+        # config.MODE = 2
         # config.INPUT_SIZE = 0         Set to 0 for one to one mapping
 
         if args.input is not None:

@@ -204,13 +204,13 @@ class CLFNet():
         create_dir(raw_dir)
 
         create_dir(self.results_path)
-        sample_interval = 328.5
+        sample_interval = self.config.TEST_INTERVAL
         batch_size = 1
         test_loader = DataLoader(
             dataset=self.test_dataset,
             batch_size=batch_size,
             num_workers=1,
-            shuffle=True
+            shuffle=False
         )
 
         total = int(len(self.test_dataset))
@@ -221,31 +221,31 @@ class CLFNet():
             for items in test_loader:
                 name = self.test_dataset.load_name(index)
                 images, images_gray, masks = self.cuda(*items)
-
-                # Save damaged image
-                if self.config.MODE == 2:
-                    path = os.path.join(damaged_dir, name)
-                    damaged_img = self.postprocess(images * masks + (1 - masks))[0]
-                    imsave(damaged_img, path)
-                    # Save masks
-                    path = os.path.join(mask_dir, name)
-                    imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
-                    # Save Ground Truth
-                    path = os.path.join(raw_dir, name)
-                    img = self.postprocess(images)[0]
-                    imsave(img, path)
-                    # print(index, name)
-
                 index += 1
-                if index > total / batch_size / sample_interval:
+                if index >= total / batch_size / sample_interval:
                     break;
+                # Save raw
+                # if self.config.SAVEIMG == 1:
+                #     path = os.path.join(damaged_dir, name)
+                #     damaged_img = self.postprocess(images * masks + (1 - masks))[0]
+                #     imsave(damaged_img, path)
+                #     # Save masks
+                #     path = os.path.join(mask_dir, name)
+                #     imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
+                #     # Save Ground Truth
+                #     path = os.path.join(raw_dir, name)
+                #     img = self.postprocess(images)[0]
+                #     imsave(img, path)
+                #     # print(index, name)
+
+
                 logs = {}
                 # run model
                 outputs = self.inpaint_model(images, masks)
                 outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                 output = self.postprocess(outputs_merged)[0]
-                if self.config.MODE == 2:
+                if self.config.SAVEIMG == 1:
                     path = os.path.join(inpainted_dir, name)
                     # print(index, name)
                     imsave(output, path)
@@ -278,7 +278,7 @@ class CLFNet():
         create_dir(raw_dir)
 
         create_dir(self.results_path)
-        sample_interval = 1
+        sample_interval = self.config.TEST_INTERVAL
         batch_size = 1
         test_loader = DataLoader(
             dataset=self.test_dataset,
@@ -293,15 +293,14 @@ class CLFNet():
         index = 0
         with torch.no_grad():
             for items in test_loader:
-                index += 1
-                if index > total / batch_size / sample_interval:
-                    break;
                 logs = {}
                 name = self.test_dataset.load_name(index)
                 images, images_gray, masks = self.cuda(*items)
-
+                index += 1
+                if index > total / batch_size / sample_interval:
+                    break;
                 # Save damaged image
-                if self.config.MODE == 4:
+                if self.config.SAVEIMG == 1:
                     path = os.path.join(damaged_dir, name)
                     damaged_img = self.postprocess(images * masks + (1 - masks))[0]
                     imsave(damaged_img, path)
@@ -328,25 +327,26 @@ class CLFNet():
                 NoHoleNum = np.count_nonzero(np_masks)
                 ratio = (np_masks.size - NoHoleNum) / np_masks.size
                 i = 1
-                while ratio > 0.2 and i <= 4:
+                while ratio > 0.2 and i <= 10:
                     # Save masks again
                     # Erosion
                     masks = masks.cpu().numpy().astype(np.uint8)  # [0-255]
-                    np_masks = ndimage.grey_dilation(masks, size=(1, 1, 9, 9))
+                    # np_masks = ndimage.grey_dilation(masks, size=(1, 1, 9, 9))
+                    np_masks = ndimage.grey_dilation(masks, size=(1, 1, 15, 15))
                     masks = torch.from_numpy(np_masks).float().to(self.config.DEVICE)
 
-                    if self.config.MODE == 4:
+                    if self.config.SAVEIMG == 1:
                         path = os.path.join(mask_dir, name)
                         imsave(self.postprocess(masks), os.path.splitext(path)[0] + '_%d.png' % i)
                     outputs = self.inpaint_model(outputs_merged, masks)
-                    outputs_merged = (outputs * (1 - masks)) + (images * masks)
+                    outputs_merged = (outputs * (1 - masks)) + (outputs_merged * masks)
                     i += 1
 
                     # count no hole number and ratio
                     NoHoleNum = np.count_nonzero(np_masks)
                     ratio = (np_masks.size - NoHoleNum) / np_masks.size
 
-                if self.config.MODE == 4:
+                if self.config.SAVEIMG == 1:
                     path = os.path.join(inpainted_dir, name)
                     # print(index, name)
                     output = self.postprocess(outputs_merged)[0]
@@ -405,7 +405,7 @@ class CLFNet():
         create_dir(raw_dir)
 
         create_dir(self.results_path)
-        sample_interval = 1
+        sample_interval = self.config.TEST_INTERVAL
         batch_size = 1
         test_loader = DataLoader(
             dataset=self.test_dataset,
@@ -424,7 +424,7 @@ class CLFNet():
                 images, images_gray, masks = self.cuda(*items)
 
                 # Save damaged image
-                if self.config.MODE == 2:
+                if self.config.SAVEIMG == 1:
                     path = os.path.join(damaged_dir, name)
                     damaged_img = self.postprocess(images * masks + (1 - masks))[0]
                     imsave(damaged_img, path)
@@ -446,7 +446,7 @@ class CLFNet():
                 outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                 output = self.postprocess(outputs_merged)[0]
-                if self.config.MODE == 2:
+                if self.config.SAVEIMG == 1:
                     path = os.path.join(inpainted_dir, name)
                     # print(index, name)
                     imsave(output, path)

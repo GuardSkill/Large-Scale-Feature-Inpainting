@@ -1,5 +1,5 @@
 ### Note: this is journal version of paper[..] 
-If you want to download the code of journal version, please use:
+If you want to download the code of journal version, please use:  
 git clone --single-branch --branch journal https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/tree/journal
 ##   Interactive Fusion Network for High-Resolution Image Inpainting
  [BibTex](#citation)

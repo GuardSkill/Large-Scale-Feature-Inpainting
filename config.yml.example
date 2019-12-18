@@ -1,10 +1,11 @@
-MODE: 1             # 1: train, 2: test, 3: eval
+MODE: 1             # 1: train, 2: test, 3: eval, 4: progressive_inpainting
 MASK: 3             # 1: random block, 2: half, 3: external, 4: (external, random block), 5: (external, random block, half)  6: one to one image mask
 SEED: 10            # random seed
 GPU: [0]            # list of gpu ids
 DEBUG: 0           # turns on debugging mode
 VERBOSE: 0          # turns on verbose mode in the output console
 
+SAVEIMG: 0           # if save the image in test phase
 TRAIN_FLIST: ./datasets/places2_train.flist
 VAL_FLIST: ./datasets/places2_test.flist
 TEST_FLIST: ./datasets/places2_test.flist
@@ -39,3 +40,4 @@ SAMPLE_INTERVAL: 1000         # how many iterations to wait before sampling (0: 
 SAMPLE_SIZE: 12               # number of images to sample
 EVAL_INTERVAL: 20             # How many INTERVAL sample while valuation  (0: never  36000 in places)
 LOG_INTERVAL: 10              # how many iterations to wait before logging training status (0: never)
+TEST_INTERVAL: 32.85          # how many interval numbers to test
