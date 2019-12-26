@@ -23,7 +23,7 @@ cd Large-Scale-Feature-Inpainting
 - Install [PyTorch](http://pytorch.org).
 - Install python requirements:
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ## Datasets
@@ -33,14 +33,14 @@ We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.ed
 After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists for images or masks. To generate the training set file lists on Places2 dataset run:
 ```bash
 mkdir datasets
-python ./scripts/flist.py --path [path_to_places2_train_set] --output ./datasets/places2_train.flist
-python ./scripts/flist.py --path [path_to_places2_validation_set] --output ./datasets/places2_val.flist
-python ./scripts/flist.py --path [path_to_places2_test_set] --output ./datasets/mask_test.flist
+python3 ./scripts/flist.py --path [path_to_places2_train_set] --output ./datasets/places2_train.flist
+python3 ./scripts/flist.py --path [path_to_places2_validation_set] --output ./datasets/places2_val.flist
+python3 ./scripts/flist.py --path [path_to_places2_test_set] --output ./datasets/mask_test.flist
 ```
 
 We alse provide the function for generate the file lists of CelebA by using the official partition file. To generate the train,val,test dataset file lists on celeba dataset run:
 ```bash
---path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file] 
+python3 ./scripts/flist.py --path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file] 
 ```
 
 ### 2) Irregular Masks
@@ -54,16 +54,16 @@ We additionally provide the [code](https://github.com/GuardSkill/AITools/blob/ma
 ## Getting Started
 Download the pre-trained models using the following links and copy them under `./checkpoints` directory.
 
-Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng)
+Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing)
 
-Pretrained on CelebA:  [mega](https://drive.google.com/file/d/1opkFszQr9lSKfaoop-RYbu5LRNrZim27/view?usp=sharing) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing)
+Pretrained on CelebA:  [mega](https://mega.nz/#!FLB0XIJJ!_CXWD8V-2p33pjMnODNR7iD5uehSljscri8S_H7jtq0) | [Google Drive](https://drive.google.com/file/d/1opkFszQr9lSKfaoop-RYbu5LRNrZim27/view?usp=sharing) 
 
 ### 1) Training
 To train the model, create a `config.yaml` file similar to the [example config file](https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
 
 To train the ISNet:
 ```bash
-python train.py --checkpoints [path to checkpoints]
+python3 train.py --checkpoints [path to checkpoints]
 ```
 
 ### 2) Evaluation and Testing  
@@ -71,13 +71,13 @@ To test the model, create a `config.yaml` file similar to the [example config fi
 
 You can evaluate the test dataset which list file path is recorded in `config.yaml` by this command:
 ```bash
-python test.py \
+python3 test.py \
 --path ./checkpoints/Celeba
 ```
 
 You can test the model for some specific images and masks, you need to provide an input images and a binary masks. Please make sure that the resolution of mask is same as images To test the model:
 ```bash
-python test.py \
+python3 test.py \
   --checkpoints [path to checkpoints] \
   --input [path to input directory or file] \
   --mask [path to masks directory or mask file] \
@@ -86,7 +86,7 @@ python test.py \
 
 We provide some test examples under `./examples` directory. Please download the [pre-trained models](#getting-started) and run:
 ```bash
-python test.py \
+python3 test.py \
   --checkpoints ./checkpoints/places2 
   --input ./examples/places2/images 
   --mask ./examples/places2/masks
