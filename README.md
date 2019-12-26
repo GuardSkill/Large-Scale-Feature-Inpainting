@@ -1,3 +1,7 @@
+### Note: this is tge code of conference paper[..] 
+If you want to download this code, please use command:  
+git clone https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
+
 ##   Interactive Fusion Network for High-Resolution Image Inpainting
  [BibTex](#citation)
 
