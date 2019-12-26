@@ -1,13 +1,12 @@
 ### Note: this is journal version of paper[..] 
 If you want to download the code of journal version, please use:  
 git clone --single-branch --branch journal https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
-##   Interactive Fusion Network for High-Resolution Image Inpainting
+## Image Inpainting with Interactive Separation Network and Progressive Reconstruction
  [BibTex](#citation)
 
 
 ### Introduction:
-
-<p align='center'>  
+<p align='center'>
   <img src='https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/images/Framework.png' width='870'/>
 </p>
 The framework of Interactive Fusion Network, which is used to replace the generator of the inpainting architecture.
@@ -20,30 +19,30 @@ The framework of Interactive Fusion Network, which is used to replace the genera
 ## Installation
 - Clone this repo:
 ```bash
-git clone https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
+git clone --single-branch --branch journal https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
 cd Large-Scale-Feature-Inpainting
 ```
 - Install [PyTorch](http://pytorch.org).
 - Install python requirements:
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ## Datasets
 ### 1) Images
-We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) datasets. To train a model on the full dataset, download datasets from official websites. 
+We use [Places2](http://places2.csail.mit.edu), [CelebA](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) datasets. To train a model on the full dataset, download datasets from official websites.
 
 After downloading, run [`scripts/flist.py`](scripts/flist.py) to generate train, test and validation set file lists for images or masks. To generate the training set file lists on Places2 dataset run:
 ```bash
 mkdir datasets
-python ./scripts/flist.py --path [path_to_places2_train_set] --output ./datasets/places2_train.flist
-python ./scripts/flist.py --path [path_to_places2_validation_set] --output ./datasets/places2_val.flist
-python ./scripts/flist.py --path [path_to_places2_test_set] --output ./datasets/mask_test.flist
+python3 ./scripts/flist.py --path [path_to_places2_train_set] --output ./datasets/places2_train.flist
+python3 ./scripts/flist.py --path [path_to_places2_validation_set] --output ./datasets/places2_val.flist
+python3 ./scripts/flist.py --path [path_to_places2_test_set] --output ./datasets/mask_test.flist
 ```
 
 We alse provide the function for generate the file lists of CelebA by using the official partition file. To generate the train,val,test dataset file lists on celeba dataset run:
 ```bash
-python ./scripts/flist.py --path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file] 
+python3 ./scripts/flist.py --path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file]
 ```
 
 ### 2) Irregular Masks
@@ -57,30 +56,35 @@ We additionally provide the [code](https://github.com/GuardSkill/AITools/blob/ma
 ## Getting Started
 Download the pre-trained models using the following links and copy them under `./checkpoints` directory.
 
-Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng)
+Pretrained on Places2: [mega](https://mega.nz/#!0CJwFYCR!mgjBWOEP6Pkz9Iqf5JDDJ2sA94W0cZy2ZIzbanxfJvk) | [Google Drive]()
+Pretrained on CelebA:  [mega](https://mega.nz/#!FORDzQCD!lwSL2NII_OcRvncq4as5EBnO6PlaXQNnBB0d-QroVCU) | [Google Drive]()
 
-Pretrained on CelebA:  [mega](https://drive.google.com/file/d/1opkFszQr9lSKfaoop-RYbu5LRNrZim27/view?usp=sharing) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing)
+Please note that our Places2 models are trained by multi GPUs, so please load using multiple GPUS. Specially, replace 3th row of config.yml in your checkpoint with code:```GPU: [0,1]```
 
 ### 1) Training
 To train the model, create a `config.yaml` file similar to the [example config file](https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
 
 To train the ISNet:
 ```bash
-python train.py --checkpoints [path to checkpoints]
+python3 train.py --checkpoints [path to checkpoints]
 ```
 
-### 2) Evaluation and Testing  
+### 2) Evaluation and Testing
 To test the model, create a `config.yaml` file similar to the [example config file](config.yml.example) and copy it under your checkpoints directory. Read the [configuration](#model-configuration) guide for more information on model configuration.
 
 You can evaluate the test dataset which list file path is recorded in `config.yaml` by this command:
 ```bash
-python test.py \
---path ./checkpoints/Celeba
+python3 test.py --path ./checkpoints/Celeba
+```
+
+You can evaluate the test dataset using progressive reconstruction algorithm by this command:
+```bash
+python3 progressiv_test.py --path ./checkpoints/Celeba
 ```
 
 You can test the model for some specific images and masks, you need to provide an input images and a binary masks. Please make sure that the resolution of mask is same as images To test the model:
 ```bash
-python test.py \
+python3 test.py \
   --checkpoints [path to checkpoints] \
   --input [path to input directory or file] \
   --mask [path to masks directory or mask file] \
@@ -89,9 +93,9 @@ python test.py \
 
 We provide some test examples under `./examples` directory. Please download the [pre-trained models](#getting-started) and run:
 ```bash
-python test.py \
-  --checkpoints ./checkpoints/places2 
-  --input ./examples/places2/images 
+python3 test.py \
+  --checkpoints ./checkpoints/places2
+  --input ./examples/places2/images
   --mask ./examples/places2/masks
   --output ./examples/places2/results
 ```
@@ -123,8 +127,8 @@ If you use this code for your research, please cite our paper <a href="https://"
 
 Option          | Description
 ----------------| -----------
-MODE            | 1: train, 2: test, 3: eval             #
-MASK            | 1: random block, 2: half, 3: external, 4: external + random block, 5: external + random block + half
+MODE            | 1: train, 2: test, 3: eval, 4: progressive_inpainting
+MASK            | 1: random block, 2: half, 3: external, 4: (external, random block), 5: (external, random block, half)  6: one to one image mask
 SEED            | random number generator seed
 GPU             | list of gpu ids, comma separated list e.g. [0,1]
 DEBUG           | 0: no debug, 1: debugging mode
@@ -134,6 +138,7 @@ VERBOSE         | 0: no verbose, 1: output detailed statistics in the output con
 
 Option          | Description
 ----------------| -----------
+SAVEIMG         | if save the image in test phase 1: save, 0: not save
 TRAIN_FLIST     | text file containing training set files list
 VAL_FLIST       | text file containing validation set files list
 TEST_FLIST      | text file containing test set files list
@@ -145,11 +150,12 @@ TEST_MASK_FLIST | text file containing test set masks files list (only with MASK
 
 Option                 |Default| Description
 -----------------------|-------|------------
+BLOCKS                 |4      | set the number residual blocks in each stage
 LR                     | 0.0001| learning rate
 D2G_LR                 | 0.1   | discriminator/generator learning rate ratio
 BETA1                  | 0.0   | adam optimizer beta1
 BETA2                  | 0.9   | adam optimizer beta2
-BATCH_SIZE             | 8     | input batch size 
+BATCH_SIZE             | 8     | input batch size
 INPUT_SIZE             | 256   | input image size for training. (0 for original size)
 MAX_ITERS              | 2e6   | maximum number of iterations to train the model
 MAX_STEPS:             | 5000  |maximum number of each epoch
@@ -166,3 +172,5 @@ EVAL_INTERVAL          | 0     | how many iterations to wait before evaluating t
 SAMPLE_INTERVAL        | 1000  | how many iterations to wait before saving sample (0: never)
 SAMPLE_SIZE            | 12    | number of images to sample on each samling interval
 EVAL_INTERVAL          | 3     | How many INTERVAL sample while valuation  (0: never  36000 in places)
+LOG_INTERVAL           |10     | how many iterations to wait before logging training status (0: never)
+TEST_INTERVAL          | 3657  | how many interval numbers to test
