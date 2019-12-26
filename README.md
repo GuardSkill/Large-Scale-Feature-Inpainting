@@ -1,6 +1,6 @@
 ### Note: this is journal version of paper[..] 
 If you want to download the code of journal version, please use:  
-git clone --single-branch --branch journal https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/tree/journal
+git clone --single-branch --branch journal https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
 ##   Interactive Fusion Network for High-Resolution Image Inpainting
  [BibTex](#citation)
 
@@ -43,7 +43,7 @@ python ./scripts/flist.py --path [path_to_places2_test_set] --output ./datasets/
 
 We alse provide the function for generate the file lists of CelebA by using the official partition file. To generate the train,val,test dataset file lists on celeba dataset run:
 ```bash
---path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file] 
+python ./scripts/flist.py --path [path_to_celeba_dataset] --celeba [path_to_celeba_partition_file] 
 ```
 
 ### 2) Irregular Masks

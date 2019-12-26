@@ -29,18 +29,18 @@ else:
     for train_file in traindf[0]:
         images.append(os.path.join(root_dir, train_file))
 
-    np.savetxt('../datasets/celeba_train.flist', images, fmt='%s')
+    np.savetxt('./datasets/celeba_train.flist', images, fmt='%s')
 
     images = []
     evaldf = df[df[1] == 1]
     for eval_file in evaldf[0]:
         images.append(os.path.join(root_dir, eval_file))
 
-    np.savetxt('../datasets/celeba_eval.flist', images, fmt='%s')
+    np.savetxt('./datasets/celeba_eval.flist', images, fmt='%s')
 
     images = []
     traindf = df[df[1] == 2]
     for train_file in traindf[0]:
         images.append(os.path.join(root_dir, train_file))
 
-    np.savetxt('../datasets/celeba_test.flist', images, fmt='%s')
+    np.savetxt('./datasets/celeba_test.flist', images, fmt='%s')

@@ -10,6 +10,7 @@ from .utils import Progbar, create_dir, stitch_images, imsave
 from .metrics import PSNR, SSIM
 from libs.logger import Logger
 import matplotlib.pyplot as plt
+import time
 
 # cross_level Features Net
 class CLFNet():
@@ -213,16 +214,18 @@ class CLFNet():
             shuffle=False
         )
 
-        total = int(len(self.test_dataset))
-        progbar = Progbar(int(total / batch_size / sample_interval), width=30, stateful_metrics=['step'])
-
+        total = int(len(self.test_dataset)/ batch_size / sample_interval)
+        progbar = Progbar(total, width=30, stateful_metrics=['step'])
         index = 0
+        proc_start_time = time.time()
+        total_time=0.
+
         with torch.no_grad():
             for items in test_loader:
                 name = self.test_dataset.load_name(index)
                 images, images_gray, masks = self.cuda(*items)
                 index += 1
-                if index >= total / batch_size / sample_interval:
+                if index >= total:
                     break;
                 # Save raw
                 # if self.config.SAVEIMG == 1:
@@ -249,6 +252,11 @@ class CLFNet():
                     path = os.path.join(inpainted_dir, name)
                     # print(index, name)
                     imsave(output, path)
+                cnt_time = time.time() - proc_start_time
+                total_time=total_time+cnt_time
+                # print('Image {} done, time {}, totaltime{}, {} sec/Image'.format(index, cnt_time,total_time,
+                #                                                             float(total_time) / index))
+
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float() = = L1 distance
@@ -263,8 +271,11 @@ class CLFNet():
 
                 if self.debug:
                     pass
+                proc_start_time = time.time()
 
         print('\nEnd test....')
+        print('Image {} done, time {}, average {} sec/Image'.format(total, total_time,
+                                                                    float(total_time) / total))
 
     def progressive_test(self):
         self.inpaint_model.eval()
@@ -284,31 +295,33 @@ class CLFNet():
             dataset=self.test_dataset,
             batch_size=batch_size,
             num_workers=1,
-            shuffle=False
+            shuffle=True
         )
 
-        total = int(len(self.test_dataset))
-        progbar = Progbar(int(total / batch_size / sample_interval), width=30, stateful_metrics=['step'])
-
+        total = int(len(self.test_dataset)/ batch_size / sample_interval)
+        progbar = Progbar(total, width=30, stateful_metrics=['step'])
         index = 0
+        total_time=0.
+        proc_start_time = time.time()
+
         with torch.no_grad():
             for items in test_loader:
                 logs = {}
                 name = self.test_dataset.load_name(index)
                 images, images_gray, masks = self.cuda(*items)
                 index += 1
-                if index > total / batch_size / sample_interval:
+                if index > total:
                     break;
                 # Save damaged image
                 if self.config.SAVEIMG == 1:
-                    path = os.path.join(damaged_dir, name)
+                    path = os.path.join(damaged_dir, str(index)+'.jpg')
                     damaged_img = self.postprocess(images * masks + (1 - masks))[0]
                     imsave(damaged_img, path)
                     # Save masks
-                    path = os.path.join(mask_dir, name)
+                    path = os.path.join(mask_dir, str(index))
                     imsave(self.postprocess(masks), os.path.splitext(path)[0] + '.png')
                     # Save Ground Truth
-                    path = os.path.join(raw_dir, name)
+                    path = os.path.join(raw_dir, str(index)+'.jpg')
                     img = self.postprocess(images)[0]
                     imsave(img, path)
                     # print(index, name)
@@ -347,10 +360,13 @@ class CLFNet():
                     ratio = (np_masks.size - NoHoleNum) / np_masks.size
 
                 if self.config.SAVEIMG == 1:
-                    path = os.path.join(inpainted_dir, name)
+                    path = os.path.join(inpainted_dir, str(index)+'.jpg')
                     # print(index, name)
                     output = self.postprocess(outputs_merged)[0]
                     imsave(output, path)
+                cnt_time = time.time() - proc_start_time
+                total_time = total_time + cnt_time
+
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 # mae = (torch.sum(torch.abs(images - outputs_merged)) / images.numel()).float()
@@ -365,8 +381,11 @@ class CLFNet():
 
                 if self.debug:
                     pass
+                proc_start_time = time.time()
 
         print('\nEnd test....')
+        print('Image {} done, time {}, average {} sec/Image'.format(total, total_time,
+                                                                    float(total_time) / total))
 
     def feature_visualize(self,module, input):
         xs=input[0]
