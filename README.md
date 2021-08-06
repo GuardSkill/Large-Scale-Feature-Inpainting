@@ -56,7 +56,7 @@ We additionally provide the [code](https://github.com/GuardSkill/AITools/blob/ma
 ## Getting Started
 Download the pre-trained models using the following links and copy them under `./checkpoints` directory.
 
-Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing)
+Pretrained on Places2: [mega](https://mega.nz/#!0XAiXazI!dyNww5qluMdVwS79EqzNCVfICPvFueWZEMiQ8JXd_Ng) | [Google Drive](https://drive.google.com/file/d/158eLijrTHfNP1GJ2IZHVv88MkvgA6Vww/view?usp=sharing) | [坚果云](https://www.jianguoyun.com/p/Dej8T9UQxMrcCRjNrYYE)
 
 Pretrained on CelebA:  [mega](https://mega.nz/#!FLB0XIJJ!_CXWD8V-2p33pjMnODNR7iD5uehSljscri8S_H7jtq0) | [Google Drive](https://drive.google.com/file/d/1opkFszQr9lSKfaoop-RYbu5LRNrZim27/view?usp=sharing) 
 
