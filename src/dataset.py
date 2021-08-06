@@ -12,7 +12,7 @@ from skimage.feature import canny
 from skimage.color import rgb2gray, gray2rgb
 from .utils import create_mask
 import torch.utils.data.sampler
-
+import PIL.ImageOps
 
 class Dataset(torch.utils.data.Dataset):
     def __init__(self, config, flist, mask_flist, augment=True, training=True, sample_interval=1):
@@ -23,7 +23,11 @@ class Dataset(torch.utils.data.Dataset):
         self.mask = config.MASK
 
         self.data = self.load_flist(flist)[0::sample_interval]
+        # random.shuffle(self.data)
         self.mask_data = self.load_flist(mask_flist)
+        # random.shuffle(self.mask_data)
+        # print('Mask num :',len(self.mask_data))
+
         # in somne test mode, there's a one-to-one relationship between mask and image
         # masks are loaded non random
         # if config.MODE == 2:
@@ -50,7 +54,7 @@ class Dataset(torch.utils.data.Dataset):
         size = self.input_size
 
         # load image
-        img = imread(self.data[index])
+        img = imread(self.data[index],mode='RGB')
 
         # gray to rgb
         if len(img.shape) < 3:
@@ -65,6 +69,8 @@ class Dataset(torch.utils.data.Dataset):
 
         # load mask
         mask = self.load_mask(img, index)
+        # invert the color of mask
+        # mask=np.invert(mask)
 
         # augment data
         # flap
@@ -78,7 +84,7 @@ class Dataset(torch.utils.data.Dataset):
             mask = np.rot90(mask, rotation_rand, axes=(0, 1))
         return self.to_tensor(img), self.to_tensor(img_gray), self.to_tensor(mask)
 
-    def load_mask(self, img, index):
+    def  load_mask(self, img, index):
         imgh, imgw = img.shape[0:2]
         mask_type = self.mask
 
@@ -104,7 +110,8 @@ class Dataset(torch.utils.data.Dataset):
             mask_index = random.randint(0, len(self.mask_data) - 1)
             mask = imread(self.mask_data[mask_index])
             mask = self.resize(mask, imgh, imgw)
-            mask = (mask > 0).astype(np.uint8) * 255  # threshold due to interpolation
+            # mask = (mask < 255).astype(np.uint8) * 255
+            mask = (mask > 0).astype(np.uint8) * 255
             return mask
 
         # test mode: load mask non random
@@ -112,6 +119,7 @@ class Dataset(torch.utils.data.Dataset):
             mask = imread(self.mask_data[index])
             mask = self.resize(mask, imgh, imgw, centerCrop=False)
             mask = rgb2gray(mask)
+            # mask = (mask < 255).astype(np.uint8) * 255
             mask = (mask > 0).astype(np.uint8) * 255
             return mask
 
@@ -141,7 +149,7 @@ class Dataset(torch.utils.data.Dataset):
         # flist: image file path, image directory path, text file flist path
         if isinstance(flist, str):
             if os.path.isdir(flist):
-                flist = list(glob.glob(flist + '/*.jpg')) + list(glob.glob(flist + '/*.png'))
+                flist = list(glob.glob(flist + '/*.jpg')) + list(glob.glob(flist + '/*.png'))+list(glob.glob(flist + '/*.jfif'))
                 flist.sort()
                 return flist
 

@@ -1,15 +1,15 @@
-### Note: this is the code of conference paper[..] 
+### The implementation of paper [Interactive Separation Network For Image Inpainting](http://www.researchgate.net/publication/346625791_INTERACTIVE_SEPARATION_NETWORK_FOR_IMAGE_INPAINTING). 
 If you want to download this code, please use command:  
 git clone https://github.com/GuardSkill/Large-Scale-Feature-Inpainting.git
 
-##   Interactive Fusion Network for High-Resolution Image Inpainting
+##   Interactive Separation Network For Image Inpainting
  [BibTex](#citation)
 
 
 ### Introduction:
 
 <p align='center'>  
-  <img src='https://github.com/GuardSkill/Large-Scale-Feature-Inpainting/blob/master/images/Framework.png' width='870'/>
+  <img src='images/Framework.png' width='870'/>
 </p>
 The framework of Interactive Fusion Network, which is used to replace the generator of the inpainting architecture.
 
@@ -48,9 +48,7 @@ python3 ./scripts/flist.py --path [path_to_celeba_dataset] --celeba [path_to_cel
 ```
 
 ### 2) Irregular Masks
-Our model is trained on the irregular mask dataset provided by [Liu et al.](https://arxiv.org/abs/1804.07723). You can download publically available Irregular Mask Dataset from [their website](http://masc.cs.gmu.edu/wiki/partialconv).
-
-Alternatively, you can download [Quick Draw Irregular Mask Dataset](https://github.com/karfly/qd-imd) by Karim Iskakov which is combination of 50 million strokes drawn by human hand.
+Our model is trained on the noised irregular mask dataset(.jpg format, 0 represents invalid region), which an be download at the Chinese NetDisk-[坚果云](https://www.jianguoyun.com/p/Def9sg8QiMfcCRjUqYYE). These jpeg masks are made from  [Irregular Mask Dataset](http://masc.cs.gmu.edu/wiki/partialconv) provided by [Liu et al.](https://arxiv.org/abs/1804.07723).
 
 We additionally provide the [code](https://github.com/GuardSkill/AITools/blob/master/image/divide_dataset.py) for dividing the mask maps into to 4 class according to proportion of their corrupted region.
 
@@ -114,10 +112,17 @@ Lots of logic code and readme file comes from [Edge-Connect](https://github.com/
 
 
 ## Citation
-If you use this code for your research, please cite our paper <a href="https://">None</a>:
+If you use this code for your research, please cite our paper <a href="https://ieeexplore.ieee.org/document/9191263">Interactive Separation Network For Image Inpainting</a>:
 
 ```
-
+@inproceedings{li2020interactive,
+  title={Interactive Separation Network For Image Inpainting},
+  author={Li, Siyuan and Lu, Lu and Zhang, Zhiqiang and Cheng, Xin and Xu, Kepeng and Yu, Wenxin and He, Gang and Zhou, Jinjia and Yang, Zhuo},
+  booktitle={2020 IEEE International Conference on Image Processing (ICIP)},
+  pages={1008--1012},
+  year={2020},
+  organization={IEEE}
+}
 ```
 
 #### General Model Configurations

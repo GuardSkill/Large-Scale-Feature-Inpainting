@@ -2,13 +2,13 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-
+import time
 from .dataset import Dataset
 from .models import InpaintingModel
 from .utils import Progbar, create_dir, stitch_images, imsave
 from .metrics import PSNR, SSIM
 from libs.logger import Logger
-
+import gpustat
 
 # cross_level Features Net
 class CLFNet():
@@ -96,9 +96,9 @@ class CLFNet():
 
                 # metrics
                 psnr = self.psnr(self.postprocess(images), self.postprocess(outputs_merged))
-                # mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
+                mae = (torch.sum(torch.abs(images - outputs_merged)) / torch.sum(images)).float()
                 logs['psnr'] = psnr.item()
-                # logs['mae'] = mae.item()
+                logs['mae'] = mae.item()
 
                 # backward
                 self.inpaint_model.backward(gen_loss, dis_loss)
@@ -239,7 +239,12 @@ class CLFNet():
                     break;
                 logs = {}
                 # run model
+
+                start = time.clock()
                 outputs = self.inpaint_model(images, masks)
+                elapsed = (time.clock() - start)
+                print("Inference Time used:", elapsed)
+
                 outputs_merged = (outputs * (1 - masks)) + (images * masks)
 
                 output = self.postprocess(outputs_merged)[0]
